@@ -1,19 +1,27 @@
+import re
 import sys
 
 class ChessPosition:
     '''Represents a static chess position.'''
 
+    __fen_regex__ = ('([\dBbKkNnPpQqRr]{1,8}/){7}[\dBbKkNnPpQqRr]{1,8} '
+                     '[wb] ((K?Q?k?q?)|-) (([a-h][1-8])|-) \d{1,2} \d{1,4}')
+
+    __fen_start__ = ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
+                     'w KQkq - 0 1')
+                
     def __fen_to_position__(self, fen): 
         '''Converts an FEN string into the chess position it represents.'''
-        self.board = [['-'] * 8 for i in range(8)]
+
+        matchObj = re.match(self.__fen_regex__, fen)
+        if not matchObj:
+            raise ValueError('Invalid FEN string.')
+            
+        self.board = [['-'] * 8 for i in range(8)] # Create empty chess board
         rows = fen.split('/')
-        # The last string contains the piece data for the last row followed
-        # by the metadata. 
         data = rows[7].split(' ') 
         rows[7] = data[0]
         for cur_row, row in enumerate(rows):
-            if len(row) > 8:
-                sys.exit('Error: Too many characters in a row')
             cur_col = 0
             for c in row:
                 if c.isalpha():
@@ -21,19 +29,11 @@ class ChessPosition:
                     cur_col += 1
                 elif c.isdigit():
                     cur_col += int(c)
-                else: 
-                    print('Error: Invalid character %c.' % (c))
-                    break
-                if cur_col > 8:
-                    sys.exit('Error: Too many columns in row %d.' % (cur_row))
-               # cur_row += 1
+
         self.turn = data[1]
         self.castling = data[2]
         self.en_passant = data[3]
 
-    __fen_start__ = ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
-                     'w KQkq - 0 1')
-                
     def __init__(self, fen = __fen_start__):
         '''Initialises a 2-dimensional array from an FEN string. The default
             FEN describes the starting position of a chess game.'''
@@ -45,6 +45,7 @@ class ChessPosition:
             print(row)
 
     def print_info(self):
+        '''Prints the FEN information'''
         print('%s to move.' % self.turn.upper())
         if self.castling == '-':
             print('Neither side can castle.')
@@ -54,10 +55,12 @@ class ChessPosition:
             print('En passant available on %s.' % self.en_passant)
 
     def print_position(self):
+        '''Prints the position and the FEN information'''
         print(' ')
         self.print_board()
         print(' ')
         self.print_info()
+        print(' ')
 
 start = ChessPosition()
 start.print_position()
