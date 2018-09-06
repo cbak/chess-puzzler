@@ -55,7 +55,9 @@ class ChessPosition:
 
     def print_position(self):
         print(' ')
-        print_board(self)
+        self.print_board()
         print(' ')
-        print_info(self)
+        self.print_info()
 
+start = ChessPosition()
+start.print_position()
