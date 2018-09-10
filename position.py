@@ -1,23 +1,46 @@
+"""
+Defines a class ChessPosition that represents static chess position.
+"""
+
 import re
 import sys
 
+
 class ChessPosition:
-    '''Represents a static chess position.'''
+    """Represents a static chess position.
 
-    __fen_regex__ = ('([\dBbKkNnPpQqRr]{1,8}/){7}[\dBbKkNnPpQqRr]{1,8} '
-                     '[wb] ((K?Q?k?q?)|-) (([a-h][1-8])|-) \d{1,2} \d{1,4}')
+    Attributes:
+        board (str[][]): Textual representation of a chess position.
+        turn (str): The player to move ('w' or 'b').
+        castling (str): The castling rights of both players.
+        en_passant (str): The square on which an en passant capture can
+                          be made on the following move (if any).
 
-    __fen_start__ = ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
-                     'w KQkq - 0 1')
+    Methods:
+        print_board: Pretty print the board.
+        print_info: Print the turn, castling, and en_passant attributes.
+        print_position: Print the board and the info.
+
+    """
+    FEN_REGEX = (
+        '([\dBbKkNnPpQqRr]{1,8}/){7}[\dBbKkNnPpQqRr]{1,8} '
+        '[wb] ((K?Q?k?q?)|-) (([a-h][1-8])|-) \d{1,2} \d{1,4}'
+    )
+
+    FEN_START = (
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+    )
                 
-    def __fen_to_position__(self, fen): 
-        '''Converts an FEN string into the chess position it represents.'''
+    def __init__(self, fen=FEN_START):
+        """Initialise the position from an FEN string.
 
-        matchObj = re.match(self.__fen_regex__, fen)
+        Args: fen (str): FEN string describing a chess position.
+
+        """
+        matchObj = re.match(self.FEN_REGEX, fen)
         if not matchObj:
             raise ValueError('Invalid FEN string.')
-            
-        self.board = [['-'] * 8 for i in range(8)] # Create empty chess board
+        self.board = [['-'] * 8 for i in range(8)]
         rows = fen.split('/')
         data = rows[7].split(' ') 
         rows[7] = data[0]
@@ -34,18 +57,13 @@ class ChessPosition:
         self.castling = data[2]
         self.en_passant = data[3]
 
-    def __init__(self, fen = __fen_start__):
-        '''Initialises a 2-dimensional array from an FEN string. The default
-            FEN describes the starting position of a chess game.'''
-        self.__fen_to_position__(fen)
-
     def print_board(self):
-        '''Prints the chess position'''
+        """Print the chess position."""
         for row in self.board:
             print(row)
 
     def print_info(self):
-        '''Prints the FEN information'''
+        """Print the FEN information."""
         print('%s to move.' % self.turn.upper())
         if self.castling == '-':
             print('Neither side can castle.')
@@ -55,7 +73,7 @@ class ChessPosition:
             print('En passant available on %s.' % self.en_passant)
 
     def print_position(self):
-        '''Prints the position and the FEN information'''
+        """Print the chess position and the FEN information."""
         print(' ')
         self.print_board()
         print(' ')
