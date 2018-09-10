@@ -10,7 +10,7 @@ import position
 class TestChessPosition(unittest.TestCase):
 
 
-    FEN_POSITIONS = ( 
+    FEN_POSITIONS = [ 
         ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
          'w KQkq - 0 1',
          [['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
@@ -45,9 +45,9 @@ class TestChessPosition(unittest.TestCase):
           ['P', 'P', '-', '-', 'N', 'P', 'B', 'P'],
           ['R', '-', 'B', 'Q', '-', 'R', 'K', '-']]
         )
-    )
+    ]
 
-    FEN_INFO = (
+    FEN_INFO = [
         ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
          'w KQkq - 0 1',
          'W to move.\nCastling: KQkq\n'),
@@ -58,8 +58,20 @@ class TestChessPosition(unittest.TestCase):
         ('r2qk2r/pp3ppp/2nb1n2/2p1p3/2PpP1b1/3P1NP1/PP2NPBP/'
          'R1BQ1RK1 b kq c3 0 9',
          'B to move.\nCastling: kq\nEn passant available on c3.\n')
-    )
-                    
+    ]
+
+    BAD_FENS = [
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR/ w KQkq - 0 1', 
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR KQkq - 0 1',
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - 0 1',
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq 0 1',
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 1',
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkr - 0 1',
+        'rnbqkbnr/ppppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        '8/8/8/8/2p5p/8/8/8 w - - 0 1',
+        '8K/8Q/8R/8R/8N/8B/8P w - - 0 1'
+    ]
+
     def test_fen_to_board(self):
         """Test the board generation from FEN input.
 
@@ -70,6 +82,12 @@ class TestChessPosition(unittest.TestCase):
         for fen, board in self.FEN_POSITIONS:
             test_position = position.ChessPosition(fen)
             self.assertEqual(test_position.board, board)
+
+    def test_bad_fens(self):
+        """Test incorrect FEN strings."""
+        for fen in self.BAD_FENS:
+            with self.assertRaises(ValueError): 
+                test_position = position.ChessPosition(fen)
 
     def test_fen_infos(self):
         """Test the info generation from FEN input.

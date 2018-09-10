@@ -39,7 +39,7 @@ class ChessPosition:
         """
         matchObj = re.match(self.FEN_REGEX, fen)
         if not matchObj:
-            raise ValueError('Invalid FEN string.')
+            raise ValueError('Invalid FEN.')
         self.board = [['-'] * 8 for i in range(8)]
         rows = fen.split('/')
         data = rows[7].split(' ') 
@@ -48,6 +48,8 @@ class ChessPosition:
             cur_col = 0
             for c in row:
                 if c.isalpha():
+                    if cur_col >= 8:
+                        raise ValueError('Invalid FEN: too many columns.')
                     self.board[cur_row][cur_col] = c
                     cur_col += 1
                 elif c.isdigit():
