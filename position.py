@@ -5,8 +5,16 @@ Defines a class ChessPosition that represents static chess position.
 import re
 import sys
 
+FEN_REGEX = (
+    '([\dBbKkNnPpQqRr]{1,8}/){7}[\dBbKkNnPpQqRr]{1,8} '
+    '[wb] ((K?Q?k?q?)|-) (([a-h][1-8])|-) \d{1,2} \d{1,4}'
+)
 
-class ChessPosition:
+FEN_START = (
+    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+)
+
+class Position:
     """Represents a static chess position.
 
     Attributes:
@@ -16,20 +24,9 @@ class ChessPosition:
         en_passant (str): The square on which an en passant capture can
                           be made on the following move (if any).
 
-    Methods:
-        print_board: Pretty print the board.
-        print_info: Print the turn, castling, and en_passant attributes.
-        print_position: Print the board and the info.
+    Methods: print_board, print_info, print_position
 
     """
-    FEN_REGEX = (
-        '([\dBbKkNnPpQqRr]{1,8}/){7}[\dBbKkNnPpQqRr]{1,8} '
-        '[wb] ((K?Q?k?q?)|-) (([a-h][1-8])|-) \d{1,2} \d{1,4}'
-    )
-
-    FEN_START = (
-        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-    )
                 
     def __init__(self, fen=FEN_START):
         """Initialise the position from an FEN string.
@@ -37,7 +34,7 @@ class ChessPosition:
         Args: fen (str): FEN string describing a chess position.
 
         """
-        matchObj = re.match(self.FEN_REGEX, fen)
+        matchObj = re.match(FEN_REGEX, fen)
         if not matchObj:
             raise ValueError('Invalid FEN.')
         self.board = [['-'] * 8 for i in range(8)]
@@ -81,6 +78,3 @@ class ChessPosition:
         print(' ')
         self.print_info()
         print(' ')
-
-start = ChessPosition()
-start.print_position()
