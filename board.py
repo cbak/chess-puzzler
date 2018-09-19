@@ -11,25 +11,22 @@ WHITE = (255, 255, 255)
 BLUE = (125, 150, 255)
 RED = (255, 100, 100)
 
-BOARD_WIDTH = 600
-BOARD_HEIGHT = 600
-
-SQUARE_WIDTH = 75
-SQUARE_HEIGHT = 75
+BOARD_SIZE = 600 
+SQUARE_SIZE = BOARD_SIZE//8
 
 piece_sprites = {
-    'P': 'white-pawn.png',
-    'N': 'white-knight.png',
-    'B': 'white-bishop.png',
-    'R': 'white-rook.png',
-    'Q': 'white-queen.png',
-    'K': 'white-king.png',
-    'p': 'black-pawn.png',
-    'n': 'black-knight.png',
-    'b': 'black-bishop.png',
-    'r': 'black-rook.png',
-    'q': 'black-queen.png',
-    'k': 'black-king.png'
+    'P': 'WhitePawn.png',
+    'N': 'WhiteKnight.png',
+    'B': 'WhiteBishop.png',
+    'R': 'WhiteRook.png',
+    'Q': 'WhiteQueen.png',
+    'K': 'WhiteKing.png',
+    'p': 'BlackPawn.png',
+    'n': 'BlackKnight.png',
+    'b': 'BlackBishop.png',
+    'r': 'BlackRook.png',
+    'q': 'BlackQueen.png',
+    'k': 'BlackKing.png'
 }
 
 class PieceImage(pygame.sprite.Sprite):
@@ -45,7 +42,9 @@ class PieceImage(pygame.sprite.Sprite):
 
         filename = piece_sprites[piece]
         file = os.path.join(dir, filename)
-        self.image = pygame.image.load(file)
+        picture = pygame.image.load(file)
+        self.image = pygame.transform.scale(picture, 
+                                           (SQUARE_SIZE, SQUARE_SIZE))
 
         # Convert to the correct pixel format
         self.image.convert() 
@@ -55,7 +54,6 @@ class PieceImage(pygame.sprite.Sprite):
 
         # Fetch the rectangle object with dimensions of the loaded image.
         self.rect = self.image.get_rect()
-
 
 class ChessBoard(position.Position):
     """ Graphical chess board. Subclass of Position 
@@ -71,27 +69,26 @@ class ChessBoard(position.Position):
         super().__init__()
         self.piece_list = pygame.sprite.Group()
 
-    def draw_board(self, screen, width, height, colour):
+    def draw_board(self, screen, size, colour):
         """ Draw an empty chessboard.
 
         Args: screen: pygame surface.
-              width (float): width of chessboard.
-              height (float): height of chessboard.
+              size (int): width/height of chessboard.
               colour (rgb tuple): colour of dark squares.
 
         """
         screen.fill(WHITE)
 
-        # Draw light squares on rows 1,3,5,7 from the top.
-        for x in range(0, width, width//4):
-            for y in range(height//8, height, height//4): 
-                light_square = [x, y, width//8, height//8]
-                pygame.draw.rect(screen, colour, light_square) 
+        # Draw dark squares on rows 1,3,5,7 from the top.
+        for x in range(0, size, size//4):
+            for y in range(SQUARE_SIZE, size, size//4): 
+                dark_square = (x, y, SQUARE_SIZE, SQUARE_SIZE)
+                pygame.draw.rect(screen, colour, dark_square) 
 
         # Draw dark squares on rows 2,4,6,8 from the top.
-        for x in range(width//8, width, width//4):
-            for y in range(0, height, height//4): 
-                dark_square = [x, y, width//8, height//8]
+        for x in range(SQUARE_SIZE, size, size//4):
+            for y in range(0, size, size//4): 
+                dark_square = (x, y, SQUARE_SIZE, SQUARE_SIZE)
                 pygame.draw.rect(screen, colour, dark_square) 
 
     def populate_board(self, screen):
@@ -102,10 +99,10 @@ class ChessBoard(position.Position):
         """
         for row, rank in enumerate(self.board):
             # y-coordinate of row centre 
-            y = SQUARE_HEIGHT * row      
+            y = SQUARE_SIZE * row      
             for column, piece in enumerate(rank):
                 # x-coordinate of column centre
-                x = SQUARE_WIDTH * column
+                x = SQUARE_SIZE * column
                 if piece.isalpha():
                     piece_sprite = PieceImage(piece)
                     piece_sprite.rect.x = x

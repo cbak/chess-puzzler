@@ -6,7 +6,7 @@ import position
 def main():
     """ Main program function. """
     pygame.init()
-    size = [board.BOARD_HEIGHT, board.BOARD_HEIGHT]
+    size = [board.BOARD_SIZE, board.BOARD_SIZE]
     screen = pygame.display.set_mode(size)
 
     pygame.display.set_caption("Chess Puzzle Trainer")
@@ -26,12 +26,11 @@ def main():
         
 
         # draw chess board
-        start_board.draw_board(screen, board.BOARD_WIDTH, 
-                         board.BOARD_HEIGHT, board.BLUE)
+        start_board.draw_board(screen, board.BOARD_SIZE, board.BLUE)
         start_board.populate_board(screen)
 
         # Pause for the next frame
-        clock.tick(60)
+        clock.tick(1)
 
     pygame.quit()
 
