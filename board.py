@@ -7,9 +7,13 @@ import pygame
 
 import position
 
+BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (125, 150, 255)
 RED = (255, 100, 100)
+
+SCREEN_HEIGHT = 800
+SCREEN_WIDTH = 600
 
 BOARD_SIZE = 600 
 SQUARE_SIZE = BOARD_SIZE//8
@@ -56,47 +60,19 @@ class PieceImage(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
 class ChessBoard(position.Position):
-    """ Graphical chess board. Subclass of Position 
+    """ Graphical chess board. Subclass of Position.
 
     Attributes:
         piece_list: A group of PieceImage objects representing all
                     the pieces on the board.
 
-    Methods: draw_board, populate_board, update_board
+    Methods: draw_board, update_board
 
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, fen): 
+        super().__init__(fen)
         self.piece_list = pygame.sprite.Group()
 
-    def draw_board(self, screen, size, colour):
-        """ Draw an empty chessboard.
-
-        Args: screen: pygame surface.
-              size (int): width/height of chessboard.
-              colour (rgb tuple): colour of dark squares.
-
-        """
-        screen.fill(WHITE)
-
-        # Draw dark squares on rows 1,3,5,7 from the top.
-        for x in range(0, size, size//4):
-            for y in range(SQUARE_SIZE, size, size//4): 
-                dark_square = (x, y, SQUARE_SIZE, SQUARE_SIZE)
-                pygame.draw.rect(screen, colour, dark_square) 
-
-        # Draw dark squares on rows 2,4,6,8 from the top.
-        for x in range(SQUARE_SIZE, size, size//4):
-            for y in range(0, size, size//4): 
-                dark_square = (x, y, SQUARE_SIZE, SQUARE_SIZE)
-                pygame.draw.rect(screen, colour, dark_square) 
-
-    def populate_board(self, screen):
-        """ Draw the pieces according to the board attribute.
-
-        Args: screen: pygame surface.
-
-        """
         for row, rank in enumerate(self.board):
             # y-coordinate of row centre 
             y = SQUARE_SIZE * row      
@@ -109,8 +85,59 @@ class ChessBoard(position.Position):
                     piece_sprite.rect.y = y
                     self.piece_list.add(piece_sprite)
 
-        self.piece_list.draw(screen)
-        # Update the screen
-        pygame.display.flip()
+    def draw_board(self, screen, size, colour):
+        """ Draw a chessboard.
 
-    # def update_board(move):
+        Args: screen: pygame surface.
+              size (int): width/height of chessboard.
+              colour (rgb tuple): colour of dark squares.
+
+        """
+        screen.fill(WHITE)
+
+        def draw_squares(square_size, x_start, y_start):
+            """ Draw squares on a series of rows in a chessboard pattern.
+
+            Args: square_size (int): width/height of a square
+                  x_start (int): x-coordinate of first square in a row.
+                  y_start (int): y-coordinate of first square in a row.
+
+            """
+            for x in range(x_start, size, square_size*2):
+                for y in range(y_start, size, square_size*2): 
+                    dark_square = (x, y, square_size, square_size)
+                    pygame.draw.rect(screen, colour, dark_square) 
+
+        draw_squares(SQUARE_SIZE, 0, SQUARE_SIZE)
+        draw_squares(SQUARE_SIZE, SQUARE_SIZE, 0)
+        
+        self.piece_list.draw(screen)
+
+        # Draw the text box at the bottom of the screen
+        pygame.draw.line(screen, BLACK, (0, BOARD_SIZE), 
+                         (SCREEN_WIDTH, BOARD_SIZE), 5)
+
+        text_rect = (0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE)
+        pygame.draw.rect(screen, colour, text_rect) 
+
+
+    def update_board(self, screen):
+        pass
+    
+    def get_square(self, pos):
+        """ Return the square contaning the passed position.
+
+        Args: pos (int, int): position of the mouse cursor.
+
+        """
+        def get_coordinate(loc):
+            if loc == 0:
+                return 0
+            else:
+                return loc // SQUARE_SIZE
+        
+        x = get_coordinate(pos[1])
+        y = get_coordinate(pos[0])
+
+        return (x, y)
+

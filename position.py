@@ -28,7 +28,7 @@ class Position:
 
     """
                 
-    def __init__(self, fen=FEN_START):
+    def __init__(self, fen):
         """Initialise the position from an FEN string.
 
         Args: fen (str): FEN string describing a chess position.
