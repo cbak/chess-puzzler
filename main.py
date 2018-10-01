@@ -6,9 +6,7 @@ import position
 def main():
     """ Main program function. """
     pygame.init()
-
     pygame.font.init()
-    text_font = pygame.font.SysFont('Calibri', 36)
 
     size = [board.SCREEN_WIDTH, board.SCREEN_HEIGHT]
     screen = pygame.display.set_mode(size)
@@ -18,25 +16,31 @@ def main():
     running = True
     clock = pygame.time.Clock()
     chessboard = board.ChessBoard(position.FEN_START)
+    chessboard.draw_board(screen, board.BOARD_SIZE, board.DARK)
+    updated_rects = None
 
     while running:
         # event loop
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                pass
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_d:
+                chessboard.erase_text(screen, board.DARK)
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for piece in chessboard.piece_list:
+                    if piece.rect.collidepoint(event.pos) == True:
+                        piece.selected = True
+            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                updated_rects = chessboard.update_board(screen, event.pos)
 
         # game logic
-        chessboard.update_board(screen)
-
-        # draw chess board
-        chessboard.draw_board(screen, board.BOARD_SIZE, board.BLUE)
 
         # Update the screen
-        pygame.display.flip()
+        if updated_rects is None:
+            pygame.display.update()
+        pygame.display.update(updated_rects)
 
         # Pause for the next frame
         clock.tick(30)

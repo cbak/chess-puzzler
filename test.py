@@ -1,5 +1,5 @@
 """
-Module for unit testing the position module.
+Module for unit testing.
 """
 
 import sys
@@ -8,8 +8,6 @@ import unittest
 import position
 
 class TestChessPosition(unittest.TestCase):
-
-
     FEN_POSITIONS = [ 
         ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
          'w KQkq - 0 1',
@@ -80,14 +78,14 @@ class TestChessPosition(unittest.TestCase):
         
         """
         for fen, board in self.FEN_POSITIONS:
-            test_position = position.ChessPosition(fen)
+            test_position = position.Position(fen)
             self.assertEqual(test_position.board, board)
 
     def test_bad_fens(self):
         """Test incorrect FEN strings."""
         for fen in self.BAD_FENS:
             with self.assertRaises(ValueError): 
-                test_position = position.ChessPosition(fen)
+                test_position = position.Position(fen)
 
     def test_fen_infos(self):
         """Test the info generation from FEN input.
@@ -116,7 +114,7 @@ class TestChessPosition(unittest.TestCase):
         for fen, info in self.FEN_INFO:
             try:
                 sys.stdout = my_stdout
-                test_position = position.ChessPosition(fen)
+                test_position = position.Position(fen)
                 test_position.print_info()
                 self.assertEqual( str(my_stdout), info)
                 my_stdout.clear()
@@ -125,5 +123,4 @@ class TestChessPosition(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
-                
+    main() 
