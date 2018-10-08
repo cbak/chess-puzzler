@@ -16,8 +16,8 @@ def main():
     running = True
     clock = pygame.time.Clock()
     chessboard = board.ChessBoard(position.FEN_START)
+    chessboard.populate_piece_list()
     chessboard.draw_board(screen, board.BOARD_SIZE, board.DARK)
-    updated_rects = None
 
     while running:
         # event loop
@@ -38,9 +38,11 @@ def main():
         # game logic
 
         # Update the screen
-        if updated_rects is None:
+        if chessboard.whole_board_update():
             pygame.display.update()
-        pygame.display.update(updated_rects)
+        else:
+            pygame.display.update(chessboard.updated_rects)
+            chessboard.clear_updated_rects()
 
         # Pause for the next frame
         clock.tick(30)

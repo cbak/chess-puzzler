@@ -43,13 +43,15 @@ class PieceImage(pygame.sprite.Sprite):
         rect: Rect describing the location occupied by the image.
         selected: True if the piece has been clicked by the user.
 
-    Methods: get_square, get_corner, erase_square, update
+    Methods: update
 
     """
-    def __init__(self, piece, dir='img'):
+    def __init__(self, piece, x, y, square, dir='img'):
         """ Load a chess piece sprite. 
         
         Args: piece (str): Character representation of a chess piece.
+              x (int): x-coordinate of the sprite's Rect.
+              y (int): y-coordinate of the sprite's Rect.
               dir (str): Directory containing the image files.
         
         """
@@ -69,86 +71,30 @@ class PieceImage(pygame.sprite.Sprite):
         # Fetch the rectangle object with dimensions of the loaded image.
         self.rect = self.image.get_rect()
 
+        # Initialise remaining attributes.
+        self.piece = piece
+        self.rect.x = x
+        self.rect.y = y
         self.selected = False
 
-    def get_square(self, pos, square_size):
-        """ Return row and column of square pointed at by cursor
-        
-        Args: pos (int, int): Position of the mouse cursor
-              square_size (int): Width and height of a square.
-        """
-        def get_coordinate(point):
-            if point == 0:
-                return 0
-            elif point == BOARD_SIZE:
-                return 7
-            else:
-                return point // square_size
-        
-        row = get_coordinate(pos[0])
-        column = get_coordinate(pos[1])
-
-        return (row, column)
     
-    def get_corner(self, square, square_size):
-        """ Return the coordinates of the top left corner of a square. 
-
-        Args: square (int, int): Row and column of a square.
-              square_size (int): Width and height of a square.
-        """
-        return (square[0] * square_size, square[1] * square_size)
-
-    def erase_square(self, screen, square, square_size):
-        """ Redraw the background of a square. Return the modified Rect.
-
-        Args: screen: The active pygame surface.
-              square (int, int): Row and column of a square.
-              square_size (int): Width and height of a square.
-        """
-        if (square[0] + square[1]) % 2 == 0:
-            colour = LIGHT
-        else:
-            colour = DARK
-        (corner_x, corner_y) = self.get_corner(square, square_size)
-
-        erased_rect = pygame.Rect(
-            corner_x, corner_y, square_size, square_size
-        )
-        pygame.draw.rect(screen, colour, erased_rect)
-
-        return erased_rect
+    def update(self, location, promotion=None):
+        """ Update the piece's location.
         
-    
-    def update(self, screen, pos):
-        """ Move the piece to the cursor position. Return updated Rects.
-        
-        Args: screen: Active pygame surface.
-              pos (int, int): Position of the mouse cursor.
+        Args: location (int, int): New coordinates.
+              promotion (str): Promotion piece selected by user.
         """
-        
-        src_square = self.get_square((self.rect.x, self.rect.y), SQUARE_SIZE)
-        dest_square = self.get_square(pos, SQUARE_SIZE)
-
-        (pos_x, pos_y) = self.get_corner(dest_square, SQUARE_SIZE)
-
-        if pos_x < 0 or pos_x > BOARD_SIZE:
+        if location[0] < 0 or location[0] > BOARD_SIZE:
             return
 
-        if pos_y < 0 or pos_y > BOARD_SIZE:
+        if location[1] < 0 or location[1] > BOARD_SIZE:
             return
-        
-        src_rect = self.erase_square(screen, src_square, SQUARE_SIZE)
-        dest_rect = self.erase_square(screen, dest_square, SQUARE_SIZE)
 
-        updated_rects = []
-        updated_rects.append(src_rect)
-        updated_rects.append(dest_rect)
-
-        self.rect.x = pos_x
-        self.rect.y = pos_y
+        self.rect.x = location[0]
+        self.rect.y = location[1]
         self.selected = False
 
-        return updated_rects
+        #TODO: Implement promotion (load new sprite to piece.image)
                         
 
 class ChessBoard(position.Position):
@@ -157,25 +103,32 @@ class ChessBoard(position.Position):
     Attributes:
         piece_list: A group of PieceImage objects representing all
                     the pieces on the board.
+        moving_pieces: A group of PieceImage objects to be moved.
+        updated_rects: A list of Rects to be updated on the next frame.
 
-    Methods: draw_board, print_to_screen, erase_text, update_board
-
+    Methods: populate_piece_list, draw_board, get_square, get_corner,
+             reset_square, update_board, whole_board_update, 
+             clear_updated_rects, print_to_screen, erase_text
     """
     def __init__(self, fen): 
         super().__init__(fen)
         self.piece_list = pygame.sprite.Group()
-        self.update_list = []
+        self.moving_pieces = pygame.sprite.Group()
+        self.updated_rects = []
 
+    def populate_piece_list(self):
+        """ Initialise the PieceImage objects for every piece.
+        
+            The attributes (x, y) specify the coordinates of the top
+            left corner of the square occupied by the piece. """
         for row, rank in enumerate(self.board):
-            # y-coordinate of row centre 
+            # y-coordinate of top border of the row 
             y = SQUARE_SIZE * row      
             for column, piece in enumerate(rank):
-                # x-coordinate of column centre
+                # x-coordinate of left border of the column
                 x = SQUARE_SIZE * column
                 if piece.isalpha():
-                    piece_sprite = PieceImage(piece)
-                    piece_sprite.rect.x = x
-                    piece_sprite.rect.y = y
+                    piece_sprite = PieceImage(piece, x, y, (row, column))
                     self.piece_list.add(piece_sprite)
 
     def draw_board(self, screen, size, colour):
@@ -213,6 +166,97 @@ class ChessBoard(position.Position):
         text_rect = (0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE)
         pygame.draw.rect(screen, colour, text_rect) 
 
+    def get_square(self, pos, square_size):
+        """ Return row and column of square pointed at by cursor
+        
+        Args: pos (int, int): (x, y) position of the mouse cursor.
+              square_size (int): Width and height of a square.
+        """
+        def get_coordinate(point):
+            if point == 0:
+                return 0
+            elif point == BOARD_SIZE:
+                return 7
+            else:
+                return point // square_size
+        
+        row = get_coordinate(pos[1])
+        column = get_coordinate(pos[0])
+
+        return (row, column)
+    
+    def reset_square(self, screen, square, square_size):
+        """ Redraw the background of a square. Return the modified Rect.
+
+        Args: screen: The active pygame surface.
+              square (int, int): Row and column of a square.
+              square_size (int): Width and height of a square.
+        """
+        if (square[0] + square[1]) % 2 == 0:
+            colour = LIGHT
+        else:
+            colour = DARK
+        
+        # Get top left corner coordinates of the square.
+        corner = (square[1] * square_size, square[0] * square_size)
+
+        erased_rect = pygame.Rect(
+            corner[0], corner[1], square_size, square_size
+        )
+        pygame.draw.rect(screen, colour, erased_rect)
+
+        return erased_rect
+
+    def update_board(self, screen, pos):
+        """ Update the board according to user input. 
+
+        Args: screen: Active pygame surface.
+              pos (int, int): Coordinates of mouse cursor.
+
+        """
+        self.moving_pieces.empty()
+        selected = None
+        target = None
+
+        for piece in self.piece_list:
+            if piece.selected:
+                selected = piece
+            if piece.rect.collidepoint(pos) == True:
+                target = piece
+
+        if selected is None or selected is target:
+            return
+
+        current_pos = (selected.rect.x, selected.rect.y)
+        src_square = self.get_square(current_pos, SQUARE_SIZE)
+        dest_square = self.get_square(pos, SQUARE_SIZE)
+
+        # if is_valid_move(args):
+
+        # Redraw background of source and destination squares.
+        src_rect = self.reset_square(screen, src_square, SQUARE_SIZE)
+        dest_rect = self.reset_square(screen, dest_square, SQUARE_SIZE)
+        self.updated_rects.append(src_rect)
+        self.updated_rects.append(dest_rect)
+        
+        # Remove sprite occupying the target square.
+        self.piece_list.remove(target)
+
+        # Get top left corner coordinates of the destination square.
+        location = (dest_square[1] * SQUARE_SIZE, dest_square[0] * SQUARE_SIZE)
+
+        # Update location of moved pieces.
+        selected.update(location)
+        self.moving_pieces.add(selected)
+        self.moving_pieces.draw(screen)
+
+
+    def whole_board_update(self):
+        """ Return True if the entire surface needs to be updated. """
+        return self.updated_rects == []
+
+    def clear_updated_rects(self):
+        self.updated_rects = []
 
     def print_to_screen(self, screen, text, x_offset, y_offset):
         """ Print text to the screen below the chessboard.
@@ -237,21 +281,4 @@ class ChessBoard(position.Position):
         text_rect = (0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE)
         pygame.draw.rect(screen, colour, text_rect) 
         
-    def update_board(self, screen, pos):
-        """ Update the board according to user input. 
 
-        Args: screen: Active pygame surface.
-              pos (int, int): Coordinates of mouse cursor.
-
-        """
-        updated_rects = []
-        selected_piece = pygame.sprite.GroupSingle()
-        for piece in self.piece_list:
-            if piece.rect.collidepoint(pos) == True:
-                self.piece_list.remove(piece) 
-            if piece.selected:
-                updated_rects = piece.update(screen, pos)
-                selected_piece.add(piece)
-        selected_piece.draw(screen)
-
-        return updated_rects
