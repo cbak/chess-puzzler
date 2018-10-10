@@ -1,6 +1,6 @@
 import pygame
 
-import board
+import graphics
 import position        
     
 def main():
@@ -8,16 +8,16 @@ def main():
     pygame.init()
     pygame.font.init()
 
-    size = [board.SCREEN_WIDTH, board.SCREEN_HEIGHT]
+    size = [graphics.SCREEN_WIDTH, graphics.SCREEN_HEIGHT]
     screen = pygame.display.set_mode(size)
 
     pygame.display.set_caption("Chess Puzzle Trainer")
 
     running = True
     clock = pygame.time.Clock()
-    chessboard = board.ChessBoard(position.FEN_START)
-    chessboard.populate_piece_list()
-    chessboard.draw_board(screen, board.BOARD_SIZE, board.DARK)
+    board = graphics.Board(position.FEN_START)
+    board.populate_piece_list()
+    board.draw_board(screen, graphics.BOARD_SIZE)
 
     while running:
         # event loop
@@ -27,22 +27,23 @@ def main():
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_d:
-                chessboard.erase_text(screen, board.DARK)
+                board.erase_text(screen)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                for piece in chessboard.piece_list:
-                    if piece.rect.collidepoint(event.pos) == True:
+                for piece in board.piece_list:
+                    if piece.rect.collidepoint(event.pos):
                         piece.selected = True
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                updated_rects = chessboard.update_board(screen, event.pos)
+                if board.board_rect.collidepoint(event.pos):
+                    updated_rects = board.update_board(screen, event.pos)
 
         # game logic
 
         # Update the screen
-        if chessboard.whole_board_update():
+        if board.whole_board_update():
             pygame.display.update()
         else:
-            pygame.display.update(chessboard.updated_rects)
-            chessboard.clear_updated_rects()
+            pygame.display.update(board.updated_rects)
+            board.clear_updated_rects()
 
         # Pause for the next frame
         clock.tick(30)

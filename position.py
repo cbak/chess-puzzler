@@ -5,14 +5,10 @@ Defines a class ChessPosition that represents static chess position.
 import re
 import sys
 
-FEN_REGEX = (
-    '([\dBbKkNnPpQqRr]{1,8}/){7}[\dBbKkNnPpQqRr]{1,8} '
-    '[wb] ((K?Q?k?q?)|-) (([a-h][1-8])|-) \d{1,2} \d{1,4}'
-)
-
 FEN_START = (
     'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-)
+) 
+
 
 class Position:
     """Represents a static chess position.
@@ -26,15 +22,20 @@ class Position:
 
     Methods: print_board, print_info, print_position
 
-    """
-                
+    """ 
+    FEN_REGEX = (
+        '([\dBbKkNnPpQqRr]{1,8}/){7}[\dBbKkNnPpQqRr]{1,8} '
+        '[wb] ((K?Q?k?q?)|-) (([a-h][1-8])|-) \d{1,2} \d{1,4}'
+    )
+
+
     def __init__(self, fen):
         """Initialise the position from an FEN string.
 
         Args: fen (str): FEN string describing a chess position.
 
         """
-        matchObj = re.match(FEN_REGEX, fen)
+        matchObj = re.match(Position.FEN_REGEX, fen)
         if not matchObj:
             raise ValueError('Invalid FEN.')
         self.board = [['-'] * 8 for i in range(8)]
@@ -78,3 +79,4 @@ class Position:
         print(' ')
         self.print_info()
         print(' ')
+        

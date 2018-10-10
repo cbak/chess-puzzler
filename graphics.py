@@ -14,11 +14,8 @@ RED = (255, 100, 100)
 
 SCREEN_HEIGHT = 800
 SCREEN_WIDTH = 600
-
+    
 BOARD_SIZE = 600 
-SQUARE_SIZE = BOARD_SIZE//8
-LIGHT = WHITE
-DARK = BLUE
 
 piece_sprites = {
     'P': 'WhitePawn.png',
@@ -46,12 +43,14 @@ class PieceImage(pygame.sprite.Sprite):
     Methods: update
 
     """
-    def __init__(self, piece, x, y, square, dir='img'):
+    def __init__(self, piece, x, y, background, size, dir='img'):
         """ Load a chess piece sprite. 
         
-        Args: piece (str): Character representation of a chess piece.
+        Args: piece (str): Chess piece object.
               x (int): x-coordinate of the sprite's Rect.
               y (int): y-coordinate of the sprite's Rect.
+              background (rgb tuple): Background colour.
+              size (int): Width/height of square/
               dir (str): Directory containing the image files.
         
         """
@@ -60,13 +59,12 @@ class PieceImage(pygame.sprite.Sprite):
         filename = piece_sprites[piece]
         file = os.path.join(dir, filename)
         picture = pygame.image.load(file)
-        self.image = pygame.transform.scale(picture, 
-                                           (SQUARE_SIZE, SQUARE_SIZE))
+        self.image = pygame.transform.scale(picture, (size, size))
         # Convert to the correct pixel format
         self.image.convert() 
         
         # Set the transparent background colour
-        self.image.set_colorkey(LIGHT)
+        self.image.set_colorkey(background)
 
         # Fetch the rectangle object with dimensions of the loaded image.
         self.rect = self.image.get_rect()
@@ -97,10 +95,14 @@ class PieceImage(pygame.sprite.Sprite):
         #TODO: Implement promotion (load new sprite to piece.image)
                         
 
-class ChessBoard(position.Position):
+class Board(position.Position):
     """ Graphical chess board. Subclass of Position.
 
     Attributes:
+        light: (rgb tuple): Colour of the light squares.
+        dark: (rgb tuple): Colour of the dark squares.
+        board_rect (pygame.Rect): Rect describing the chessboard area.
+        text_rect (pygame.Rect): Rect describing the textbox area.
         piece_list: A group of PieceImage objects representing all
                     the pieces on the board.
         moving_pieces: A group of PieceImage objects to be moved.
@@ -110,8 +112,17 @@ class ChessBoard(position.Position):
              reset_square, update_board, whole_board_update, 
              clear_updated_rects, print_to_screen, erase_text
     """
+
+    SQUARE_SIZE = BOARD_SIZE//8
+
     def __init__(self, fen): 
         super().__init__(fen)
+        self.light = WHITE
+        self.dark = BLUE
+        self.board_rect = pygame.Rect(0, 0, BOARD_SIZE, BOARD_SIZE)
+        self.text_rect = pygame.Rect(
+            0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE
+        )
         self.piece_list = pygame.sprite.Group()
         self.moving_pieces = pygame.sprite.Group()
         self.updated_rects = []
@@ -123,23 +134,24 @@ class ChessBoard(position.Position):
             left corner of the square occupied by the piece. """
         for row, rank in enumerate(self.board):
             # y-coordinate of top border of the row 
-            y = SQUARE_SIZE * row      
+            y = Board.SQUARE_SIZE * row      
             for column, piece in enumerate(rank):
                 # x-coordinate of left border of the column
-                x = SQUARE_SIZE * column
+                x = Board.SQUARE_SIZE * column
                 if piece.isalpha():
-                    piece_sprite = PieceImage(piece, x, y, (row, column))
+                    piece_sprite = PieceImage(
+                        piece, x, y, self.light, Board.SQUARE_SIZE
+                    )
                     self.piece_list.add(piece_sprite)
 
-    def draw_board(self, screen, size, colour):
+    def draw_board(self, screen, size):
         """ Draw a chessboard.
 
         Args: screen: pygame surface.
               size (int): width/height of chessboard.
-              colour (rgb tuple): colour of dark squares.
 
         """
-        screen.fill(WHITE)
+        screen.fill(self.light)
 
         def draw_squares(square_size, x_start, y_start):
             """ Draw squares on a series of rows in a chessboard pattern.
@@ -152,10 +164,10 @@ class ChessBoard(position.Position):
             for x in range(x_start, size, square_size*2):
                 for y in range(y_start, size, square_size*2): 
                     dark_square = (x, y, square_size, square_size)
-                    pygame.draw.rect(screen, colour, dark_square) 
+                    pygame.draw.rect(screen, self.dark, dark_square) 
 
-        draw_squares(SQUARE_SIZE, 0, SQUARE_SIZE)
-        draw_squares(SQUARE_SIZE, SQUARE_SIZE, 0)
+        draw_squares(Board.SQUARE_SIZE, 0, Board.SQUARE_SIZE)
+        draw_squares(Board.SQUARE_SIZE, Board.SQUARE_SIZE, 0)
         
         self.piece_list.draw(screen)
 
@@ -163,14 +175,12 @@ class ChessBoard(position.Position):
         pygame.draw.line(screen, BLACK, (0, BOARD_SIZE), 
                          (SCREEN_WIDTH, BOARD_SIZE), 5)
 
-        text_rect = (0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE)
-        pygame.draw.rect(screen, colour, text_rect) 
+        pygame.draw.rect(screen, self.dark, self.text_rect) 
 
-    def get_square(self, pos, square_size):
+    def get_square(self, pos):
         """ Return row and column of square pointed at by cursor
         
         Args: pos (int, int): (x, y) position of the mouse cursor.
-              square_size (int): Width and height of a square.
         """
         def get_coordinate(point):
             if point == 0:
@@ -178,30 +188,32 @@ class ChessBoard(position.Position):
             elif point == BOARD_SIZE:
                 return 7
             else:
-                return point // square_size
+                return point // Board.SQUARE_SIZE
         
         row = get_coordinate(pos[1])
         column = get_coordinate(pos[0])
 
         return (row, column)
     
-    def reset_square(self, screen, square, square_size):
+    def reset_square(self, screen, square):
         """ Redraw the background of a square. Return the modified Rect.
 
         Args: screen: The active pygame surface.
               square (int, int): Row and column of a square.
-              square_size (int): Width and height of a square.
         """
         if (square[0] + square[1]) % 2 == 0:
-            colour = LIGHT
+            colour = self.light
         else:
-            colour = DARK
+            colour = self.dark
         
         # Get top left corner coordinates of the square.
-        corner = (square[1] * square_size, square[0] * square_size)
+        corner = (
+            square[1] * Board.SQUARE_SIZE, square[0] * Board.SQUARE_SIZE
+        )
 
         erased_rect = pygame.Rect(
-            corner[0], corner[1], square_size, square_size
+            corner[0], corner[1], Board.SQUARE_SIZE,
+            Board.SQUARE_SIZE
         )
         pygame.draw.rect(screen, colour, erased_rect)
 
@@ -228,14 +240,13 @@ class ChessBoard(position.Position):
             return
 
         current_pos = (selected.rect.x, selected.rect.y)
-        src_square = self.get_square(current_pos, SQUARE_SIZE)
-        dest_square = self.get_square(pos, SQUARE_SIZE)
+        src_square = self.get_square(current_pos)
+        dest_square = self.get_square(pos)
 
-        # if is_valid_move(args):
-
+        #if selected.piece.is_legal_move(self, src_square, dest_square):
         # Redraw background of source and destination squares.
-        src_rect = self.reset_square(screen, src_square, SQUARE_SIZE)
-        dest_rect = self.reset_square(screen, dest_square, SQUARE_SIZE)
+        src_rect = self.reset_square(screen, src_square)
+        dest_rect = self.reset_square(screen, dest_square)
         self.updated_rects.append(src_rect)
         self.updated_rects.append(dest_rect)
         
@@ -243,7 +254,8 @@ class ChessBoard(position.Position):
         self.piece_list.remove(target)
 
         # Get top left corner coordinates of the destination square.
-        location = (dest_square[1] * SQUARE_SIZE, dest_square[0] * SQUARE_SIZE)
+        location = (dest_square[1] * Board.SQUARE_SIZE, 
+                    dest_square[0] * Board.SQUARE_SIZE)
 
         # Update location of moved pieces.
         selected.update(location)
@@ -271,7 +283,7 @@ class ChessBoard(position.Position):
         screen_text = text_font.render(text, True, BLACK)
         screen.blit(screen_text, (x_offset, BOARD_SIZE + y_offset))
 
-    def erase_text(self, screen, colour):
+    def erase_text(self, screen):
         """ Clears the text area. 
 
         Args: screen: Active pygame surface.
@@ -279,6 +291,6 @@ class ChessBoard(position.Position):
 
         """
         text_rect = (0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE)
-        pygame.draw.rect(screen, colour, text_rect) 
+        pygame.draw.rect(screen, self.dark, text_rect) 
         
 
