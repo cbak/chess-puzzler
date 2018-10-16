@@ -5,6 +5,7 @@ Module responsible for the graphical chess board.
 import os
 import pygame
 
+import piece
 import position
 
 BLACK = (0, 0, 0)
@@ -17,20 +18,6 @@ SCREEN_WIDTH = 600
     
 BOARD_SIZE = 600 
 
-piece_sprites = {
-    'P': 'WhitePawn.png',
-    'N': 'WhiteKnight.png',
-    'B': 'WhiteBishop.png',
-    'R': 'WhiteRook.png',
-    'Q': 'WhiteQueen.png',
-    'K': 'WhiteKing.png',
-    'p': 'BlackPawn.png',
-    'n': 'BlackKnight.png',
-    'b': 'BlackBishop.png',
-    'r': 'BlackRook.png',
-    'q': 'BlackQueen.png',
-    'k': 'BlackKing.png'
-}
 
 class PieceImage(pygame.sprite.Sprite):
     """ Represents a chess piece.
@@ -38,17 +25,34 @@ class PieceImage(pygame.sprite.Sprite):
     Attributes: 
         image: PNG image loaded from a file.
         rect: Rect describing the location occupied by the image.
+        piece: Piece object defined in module 'piece'.
         selected: True if the piece has been clicked by the user.
 
     Methods: update
 
     """
-    def __init__(self, piece, x, y, background, size, dir='img'):
+    piece_sprites = {
+        'P': 'WhitePawn.png',
+        'N': 'WhiteKnight.png',
+        'B': 'WhiteBishop.png',
+        'R': 'WhiteRook.png',
+        'Q': 'WhiteQueen.png',
+        'K': 'WhiteKing.png',
+        'p': 'BlackPawn.png',
+        'n': 'BlackKnight.png',
+        'b': 'BlackBishop.png',
+        'r': 'BlackRook.png',
+        'q': 'BlackQueen.png',
+        'k': 'BlackKing.png'
+    }
+
+    def __init__(self, symbol, x, y, square, background, size, dir='img'):
         """ Load a chess piece sprite. 
         
-        Args: piece (str): Chess piece object.
+        Args: symbol (str): Character representing a piece.
               x (int): x-coordinate of the sprite's Rect.
               y (int): y-coordinate of the sprite's Rect.
+              square (int, int): Current square of the piece.
               background (rgb tuple): Background colour.
               size (int): Width/height of square/
               dir (str): Directory containing the image files.
@@ -56,7 +60,7 @@ class PieceImage(pygame.sprite.Sprite):
         """
         super().__init__()
 
-        filename = piece_sprites[piece]
+        filename = PieceImage.piece_sprites[symbol]
         file = os.path.join(dir, filename)
         picture = pygame.image.load(file)
         self.image = pygame.transform.scale(picture, (size, size))
@@ -70,7 +74,7 @@ class PieceImage(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
         # Initialise remaining attributes.
-        self.piece = piece
+        self.piece = piece.PieceFactory.create(symbol, square)
         self.rect.x = x
         self.rect.y = y
         self.selected = False
@@ -140,7 +144,8 @@ class Board(position.Position):
                 x = Board.SQUARE_SIZE * column
                 if piece.isalpha():
                     piece_sprite = PieceImage(
-                        piece, x, y, self.light, Board.SQUARE_SIZE
+                        piece, x, y, (row, column), self.light, 
+                        Board.SQUARE_SIZE
                     )
                     self.piece_list.add(piece_sprite)
 
@@ -243,24 +248,24 @@ class Board(position.Position):
         src_square = self.get_square(current_pos)
         dest_square = self.get_square(pos)
 
-        #if selected.piece.is_legal_move(self, src_square, dest_square):
-        # Redraw background of source and destination squares.
-        src_rect = self.reset_square(screen, src_square)
-        dest_rect = self.reset_square(screen, dest_square)
-        self.updated_rects.append(src_rect)
-        self.updated_rects.append(dest_rect)
-        
-        # Remove sprite occupying the target square.
-        self.piece_list.remove(target)
+        if selected.piece.is_legal_move(self, dest_square):
+            # Redraw background of source and destination squares.
+            src_rect = self.reset_square(screen, src_square)
+            dest_rect = self.reset_square(screen, dest_square)
+            self.updated_rects.append(src_rect)
+            self.updated_rects.append(dest_rect)
+            
+            # Remove sprite occupying the target square.
+            self.piece_list.remove(target)
 
-        # Get top left corner coordinates of the destination square.
-        location = (dest_square[1] * Board.SQUARE_SIZE, 
-                    dest_square[0] * Board.SQUARE_SIZE)
+            # Get top left corner coordinates of the destination square.
+            location = (dest_square[1] * Board.SQUARE_SIZE, 
+                        dest_square[0] * Board.SQUARE_SIZE)
 
-        # Update location of moved pieces.
-        selected.update(location)
-        self.moving_pieces.add(selected)
-        self.moving_pieces.draw(screen)
+            # Update location of moved pieces.
+            selected.update(location)
+            self.moving_pieces.add(selected)
+            self.moving_pieces.draw(screen)
 
 
     def whole_board_update(self):

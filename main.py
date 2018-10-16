@@ -20,7 +20,6 @@ def main():
     board.draw_board(screen, graphics.BOARD_SIZE)
 
     while running:
-        # event loop
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -36,8 +35,6 @@ def main():
                 if board.board_rect.collidepoint(event.pos):
                     updated_rects = board.update_board(screen, event.pos)
 
-        # game logic
-
         # Update the screen
         if board.whole_board_update():
             pygame.display.update()
@@ -45,7 +42,6 @@ def main():
             pygame.display.update(board.updated_rects)
             board.clear_updated_rects()
 
-        # Pause for the next frame
         clock.tick(30)
 
     pygame.quit()
