@@ -56,6 +56,22 @@ class Position:
         self.turn = data[1]
         self.castling = data[2]
         self.en_passant = data[3]
+    
+    def square_to_algebraic(self, square):
+        rank = str(8 - square[0])
+        file = chr(ord('a') + square[1])
+        return file + rank
+
+    def update_position(self, symbol, start, end):
+        self.board[start[0]][start[1]] = '-'
+        self.board[end[0]][end[1]] = symbol
+        
+        if self.turn == 'w':
+            self.turn = 'b'
+        elif self.turn == 'b':
+            self.turn = 'w'
+           
+        # TODO: update en passant and castling
 
     def print_board(self):
         """Print the chess position."""

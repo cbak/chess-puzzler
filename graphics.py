@@ -19,7 +19,7 @@ SCREEN_WIDTH = 600
 BOARD_SIZE = 600 
 
 
-class PieceImage(pygame.sprite.Sprite):
+class PieceSprite(pygame.sprite.Sprite):
     """ Represents a chess piece.
     
     Attributes: 
@@ -60,7 +60,7 @@ class PieceImage(pygame.sprite.Sprite):
         """
         super().__init__()
 
-        filename = PieceImage.piece_sprites[symbol]
+        filename = PieceSprite.piece_sprites[symbol]
         file = os.path.join(dir, filename)
         picture = pygame.image.load(file)
         self.image = pygame.transform.scale(picture, (size, size))
@@ -80,10 +80,11 @@ class PieceImage(pygame.sprite.Sprite):
         self.selected = False
 
     
-    def update(self, location, promotion=None):
+    def update(self, location, square, promotion=None):
         """ Update the piece's location.
         
         Args: location (int, int): New coordinates.
+              square (int, int): New square.
               promotion (str): Promotion piece selected by user.
         """
         if location[0] < 0 or location[0] > BOARD_SIZE:
@@ -94,6 +95,7 @@ class PieceImage(pygame.sprite.Sprite):
 
         self.rect.x = location[0]
         self.rect.y = location[1]
+        self.piece.update_square(square)
         self.selected = False
 
         #TODO: Implement promotion (load new sprite to piece.image)
@@ -107,9 +109,9 @@ class Board(position.Position):
         dark: (rgb tuple): Colour of the dark squares.
         board_rect (pygame.Rect): Rect describing the chessboard area.
         text_rect (pygame.Rect): Rect describing the textbox area.
-        piece_list: A group of PieceImage objects representing all
+        piece_list: A group of PieceSprite objects representing all
                     the pieces on the board.
-        moving_pieces: A group of PieceImage objects to be moved.
+        moving_pieces: A group of PieceSprite objects to be moved.
         updated_rects: A list of Rects to be updated on the next frame.
 
     Methods: populate_piece_list, draw_board, get_square, get_corner,
@@ -132,19 +134,19 @@ class Board(position.Position):
         self.updated_rects = []
 
     def populate_piece_list(self):
-        """ Initialise the PieceImage objects for every piece.
+        """ Initialise the PieceSprite objects for every piece.
         
             The attributes (x, y) specify the coordinates of the top
             left corner of the square occupied by the piece. """
         for row, rank in enumerate(self.board):
             # y-coordinate of top border of the row 
             y = Board.SQUARE_SIZE * row      
-            for column, piece in enumerate(rank):
+            for column, symbol in enumerate(rank):
                 # x-coordinate of left border of the column
                 x = Board.SQUARE_SIZE * column
-                if piece.isalpha():
-                    piece_sprite = PieceImage(
-                        piece, x, y, (row, column), self.light, 
+                if symbol.isalpha():
+                    piece_sprite = PieceSprite(
+                        symbol, x, y, (row, column), self.light, 
                         Board.SQUARE_SIZE
                     )
                     self.piece_list.add(piece_sprite)
@@ -232,47 +234,47 @@ class Board(position.Position):
 
         """
         self.moving_pieces.empty()
-        selected = None
-        target = None
+        selected_sprite = None
+        target_sprite = None
 
-        for piece in self.piece_list:
-            if piece.selected:
-                selected = piece
-            if piece.rect.collidepoint(pos) == True:
-                target = piece
+        for piece_sprite in self.piece_list:
+            if piece_sprite.selected:
+                selected_sprite = piece_sprite
+            if piece_sprite.rect.collidepoint(pos) == True:
+                target_sprite = piece_sprite
 
-        if selected is None or selected is target:
+        if selected_sprite is None or selected_sprite is target_sprite:
             return
 
-        current_pos = (selected.rect.x, selected.rect.y)
-        src_square = self.get_square(current_pos)
         dest_square = self.get_square(pos)
+        selected = selected_sprite.piece
 
-        if selected.piece.is_legal_move(self, dest_square):
+        if selected.is_legal_move(self, dest_square):
             # Redraw background of source and destination squares.
-            src_rect = self.reset_square(screen, src_square)
-            dest_rect = self.reset_square(screen, dest_square)
+            src_rect = self.reset_square(screen, selected.square)
             self.updated_rects.append(src_rect)
-            self.updated_rects.append(dest_rect)
-            
-            # Remove sprite occupying the target square.
-            self.piece_list.remove(target)
+
+            if target_sprite is not None:
+                # Remove captured piece sprite.
+                self.piece_list.remove(target_sprite)
+                dest_rect = self.reset_square(screen, dest_square)
+                self.updated_rects.append(dest_rect)
 
             # Get top left corner coordinates of the destination square.
             location = (dest_square[1] * Board.SQUARE_SIZE, 
                         dest_square[0] * Board.SQUARE_SIZE)
 
-            # Update location of moved pieces.
-            selected.update(location)
-            self.moving_pieces.add(selected)
+            self.update_position(selected.symbol, selected.square, dest_square)
+            selected_sprite.update(location, dest_square)
+            self.moving_pieces.add(selected_sprite)
             self.moving_pieces.draw(screen)
-
 
     def whole_board_update(self):
         """ Return True if the entire surface needs to be updated. """
         return self.updated_rects == []
 
     def clear_updated_rects(self):
+        """ Empty the updated_rects field. """
         self.updated_rects = []
 
     def print_to_screen(self, screen, text, x_offset, y_offset):
