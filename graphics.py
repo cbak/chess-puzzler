@@ -26,7 +26,8 @@ class PieceSprite(pygame.sprite.Sprite):
         image: PNG image loaded from a file.
         rect: Rect describing the location occupied by the image.
         piece: Piece object defined in module 'piece'.
-        selected: True if the piece has been clicked by the user.
+        selected: True if the piece has been clicked and is being dragged
+                  by the user. False otherwise.
 
     Methods: update
 
@@ -79,6 +80,9 @@ class PieceSprite(pygame.sprite.Sprite):
         self.rect.y = y
         self.selected = False
 
+    def deselect(self):
+        """ Set 'selected' attribute to False. """
+        self.selected = False
     
     def update(self, location, square, promotion=None):
         """ Update the piece's location.
@@ -95,8 +99,7 @@ class PieceSprite(pygame.sprite.Sprite):
 
         self.rect.x = location[0]
         self.rect.y = location[1]
-        self.piece.update_square(square)
-        self.selected = False
+        self.piece.square = square
 
         #TODO: Implement promotion (load new sprite to piece.image)
                         
@@ -107,12 +110,12 @@ class Board(position.Position):
     Attributes:
         light: (rgb tuple): Colour of the light squares.
         dark: (rgb tuple): Colour of the dark squares.
-        board_rect (pygame.Rect): Rect describing the chessboard area.
-        text_rect (pygame.Rect): Rect describing the textbox area.
-        piece_list: A group of PieceSprite objects representing all
+        board_rect (pygame.Rect): Rect describing the chessboard region.
+        text_rect (pygame.Rect): Rect describing the textbox region.
+        piece_list: Group of PieceSprite objects representing all
                     the pieces on the board.
-        moving_pieces: A group of PieceSprite objects to be moved.
-        updated_rects: A list of Rects to be updated on the next frame.
+        moving_pieces: Group of PieceSprite objects to be moved.
+        updated_rects: List of Rects to be updated on the next frame.
 
     Methods: populate_piece_list, draw_board, get_square, get_corner,
              reset_square, update_board, whole_board_update, 
@@ -190,9 +193,7 @@ class Board(position.Position):
         Args: pos (int, int): (x, y) position of the mouse cursor.
         """
         def get_coordinate(point):
-            if point == 0:
-                return 0
-            elif point == BOARD_SIZE:
+            if point == BOARD_SIZE:
                 return 7
             else:
                 return point // Board.SQUARE_SIZE
@@ -201,6 +202,15 @@ class Board(position.Position):
         column = get_coordinate(pos[0])
 
         return (row, column)
+
+    def get_coordinates(self, square):
+        """ Return top left corner coordinates of a square. 
+        
+        Args: square (int, int): Array indices of a square. 
+        """
+        x = square[1] * Board.SQUARE_SIZE
+        y = square[0] * Board.SQUARE_SIZE
+        return (x, y)
     
     def reset_square(self, screen, square):
         """ Redraw the background of a square. Return the modified Rect.
@@ -214,10 +224,8 @@ class Board(position.Position):
             colour = self.dark
         
         # Get top left corner coordinates of the square.
-        corner = (
-            square[1] * Board.SQUARE_SIZE, square[0] * Board.SQUARE_SIZE
-        )
-
+        corner = self.get_coordinates(square)
+        
         erased_rect = pygame.Rect(
             corner[0], corner[1], Board.SQUARE_SIZE,
             Board.SQUARE_SIZE
@@ -226,48 +234,70 @@ class Board(position.Position):
 
         return erased_rect
 
-    def update_board(self, screen, pos):
-        """ Update the board according to user input. 
+    def select_piece(self, pos):
+        """ Mark a piece as selected if its sprite collides with 'pos'.
+
+        Args: pos (int, int): Coordinates of mouse cursor.
+        
+        """
+        for piece_sprite in self.piece_list:
+            if piece_sprite.rect.collidepoint(pos):
+                piece_sprite.selected = True
+
+    def make_move(self, screen, pos):
+        """ Test move according to mouse movement.
+            Call function to update board if move is valid. 
 
         Args: screen: Active pygame surface.
               pos (int, int): Coordinates of mouse cursor.
 
         """
-        self.moving_pieces.empty()
         selected_sprite = None
-        target_sprite = None
-
         for piece_sprite in self.piece_list:
             if piece_sprite.selected:
                 selected_sprite = piece_sprite
-            if piece_sprite.rect.collidepoint(pos) == True:
-                target_sprite = piece_sprite
-
-        if selected_sprite is None or selected_sprite is target_sprite:
+        if selected_sprite is None: 
             return
 
         dest_square = self.get_square(pos)
         selected = selected_sprite.piece
 
         if selected.is_legal_move(self, dest_square):
-            # Redraw background of source and destination squares.
-            src_rect = self.reset_square(screen, selected.square)
-            self.updated_rects.append(src_rect)
+            updated_squares = self.update_position(
+                selected.symbol, selected.square, dest_square
+            )
+            self.update_board(screen, updated_squares)
+        else:
+            selected_sprite.selected = False
 
-            if target_sprite is not None:
-                # Remove captured piece sprite.
-                self.piece_list.remove(target_sprite)
-                dest_rect = self.reset_square(screen, dest_square)
-                self.updated_rects.append(dest_rect)
+    def update_board(self, screen, updated_squares):
+        """ Update the graphical board. 
 
-            # Get top left corner coordinates of the destination square.
-            location = (dest_square[1] * Board.SQUARE_SIZE, 
-                        dest_square[0] * Board.SQUARE_SIZE)
+        Args: screen: Active pygame surface.
+              updated_squares (position.UpdatedSquares): 
+                  Object describing squares to modify.
+        """
+        self.moving_pieces.empty()
+    
+        # Delete captured piece sprite.
+        if updated_squares.clear is not None:
+            for piece_sprite in self.piece_list:
+                if piece_sprite.piece.square == updated_squares.clear:
+                    self.piece_list.remove(piece_sprite)
+                    dest_rect = self.reset_square(screen, updated_squares.clear)
+                    self.updated_rects.append(dest_rect)
 
-            self.update_position(selected.symbol, selected.square, dest_square)
-            selected_sprite.update(location, dest_square)
-            self.moving_pieces.add(selected_sprite)
-            self.moving_pieces.draw(screen)
+        # Update squares and sprites for moving pieces.
+        for move in updated_squares.moving_pieces:
+            for piece_sprite in self.piece_list:
+                if piece_sprite.piece.square == move[0]:
+                    src_rect = self.reset_square(screen, move[0])
+                    self.updated_rects.append(src_rect)
+                    location = self.get_coordinates(move[1])
+                    piece_sprite.update(location, move[1])
+                    piece_sprite.selected = False
+                    self.moving_pieces.add(piece_sprite)
+                    self.moving_pieces.draw(screen)
 
     def whole_board_update(self):
         """ Return True if the entire surface needs to be updated. """

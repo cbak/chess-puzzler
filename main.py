@@ -28,12 +28,10 @@ def main():
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_d:
                 board.erase_text(screen)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                for piece in board.piece_list:
-                    if piece.rect.collidepoint(event.pos):
-                        piece.selected = True
+                board.select_piece(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if board.board_rect.collidepoint(event.pos):
-                    updated_rects = board.update_board(screen, event.pos)
+                    board.make_move(screen, event.pos)
 
         # Update the screen
         if board.whole_board_update():

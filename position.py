@@ -57,22 +57,53 @@ class Position:
         self.castling = data[2]
         self.en_passant = data[3]
     
+    def algebraic_to_square(self, coordinates):
+        row = 8 - int(coordinates[1])
+        column = ord(coordinates[0]) - ord('a')
+        return (row, column)
+
     def square_to_algebraic(self, square):
         rank = str(8 - square[0])
         file = chr(ord('a') + square[1])
         return file + rank
 
     def update_position(self, symbol, start, end):
+        """ Update the position according to a move.
+            Return the updated squares.
+        """
+        updated = UpdatedSquares()
+
         self.board[start[0]][start[1]] = '-'
         self.board[end[0]][end[1]] = symbol
-        
+        updated.add_moved_piece(start, end)
+        updated.set_clear_square(end)
+
         if self.turn == 'w':
             self.turn = 'b'
         elif self.turn == 'b':
             self.turn = 'w'
-           
-        # TODO: update en passant and castling
 
+        # Process en passant capture.
+        if self.square_to_algebraic(end) == self.en_passant:
+            if symbol == 'P':
+                self.board[end[0]+1][end[1]] = '-'
+                updated.set_clear_square((end[0]+1, end[1]))
+            elif symbol == 'p':
+                self.board[end[0]-1][end[1]] = '-'
+                updated.set_clear_square((end[0]-1, end[1]))
+            else:
+                raise ValueError('Piece moved to en passant square not a pawn.')
+            
+        # Update en passant square.
+        if symbol == 'P' and start[0] == 6 and end[0] == 4:
+            self.en_passant = self.square_to_algebraic((5, start[1]))
+        elif symbol == 'p' and start[0] == 1 and end[0] == 3:
+            self.en_passant = self.square_to_algebraic((2, start[1]))
+        else:
+            self.en_passant = '-'
+
+        return updated
+        
     def print_board(self):
         """Print the chess position."""
         for row in self.board:
@@ -95,4 +126,22 @@ class Position:
         print(' ')
         self.print_info()
         print(' ')
+
+class UpdatedSquares:
+    """ Describes squares that are updated in a single move.
+
+    Attributes: 
+        moving_pieces ((int, int)[]): start and end squares of pieces to move.
+        clear (int, int): square containing a captured piece.
+            Only possible to capture one piece in a single move.
+    """
+    def __init__(self):
+        self.moving_pieces = []
+        self.clear = None
+
+    def add_moved_piece(self, start, end):
+        self.moving_pieces.append((start, end))
+
+    def set_clear_square(self, square):
+        self.clear = square
         
