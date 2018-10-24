@@ -33,6 +33,8 @@ class PieceSprite(pygame.sprite.Sprite):
     Methods: load_image, update
 
     """
+    selected_count = 0
+
     piece_sprites = {
         'P': 'WhitePawn.png',
         'N': 'WhiteKnight.png',
@@ -239,13 +241,16 @@ class Board(position.Position):
         Args: pos (int, int): Coordinates of mouse cursor.
         
         """
+        if PieceSprite.selected_count > 0:
+            raise ValueError("select_piece called when a piece is selected.")
         for piece_sprite in self.piece_list:
             if piece_sprite.rect.collidepoint(pos):
                 piece_sprite.selected = True
+                PieceSprite.selected_count += 1
 
     def process_move(self, screen, pos):
-        """ Test move according to mouse movement.
-            Call function to update board if move is valid. 
+        """ Test a move indicated by user mouse movement.
+            Return move data (piece symbol, start square, end square). 
 
         Args: screen: Active pygame surface.
               pos (int, int): Coordinates of mouse cursor.
@@ -268,9 +273,15 @@ class Board(position.Position):
             return selected.symbol, selected.square, dest_square
         else:
             selected_sprite.selected = False
+            PieceSprite.selected_count -= 1
             return None
 
     def find_piece_on_square(self, square):
+        """ Search for a piece sprite whose square matches the passed square. 
+
+            Args: square (int, int): Coordinates of a square.
+
+        """
         for piece_sprite in self.piece_list:
             if piece_sprite.piece.square == square:
                 return piece_sprite
@@ -280,8 +291,7 @@ class Board(position.Position):
         """ Update the graphical board. 
 
         Args: screen: Active pygame surface.
-              updated_squares (position.UpdatedSquares): 
-                  Object describing squares to modify.
+              updated_squares: tuple describing the squares to update.
         """
         self.moving_pieces.empty()
 
@@ -301,6 +311,7 @@ class Board(position.Position):
             location = self.coordinates_from_square(move[1])
             moving_piece.update(location, move[1])
             moving_piece.selected = False
+            PieceSprite.selected_count -= 1
             self.moving_pieces.add(moving_piece)
             self.moving_pieces.draw(screen)
 
