@@ -16,7 +16,8 @@ RED = (255, 100, 100)
 SCREEN_HEIGHT = 800
 SCREEN_WIDTH = 600
     
-BOARD_SIZE = 600 
+BOARD_SIZE = 600
+SQUARE_SIZE = BOARD_SIZE//8
 
 
 class PieceSprite(pygame.sprite.Sprite):
@@ -29,7 +30,7 @@ class PieceSprite(pygame.sprite.Sprite):
         selected: True if the piece has been clicked and is being dragged
                   by the user. False otherwise.
 
-    Methods: update
+    Methods: load_image, update
 
     """
     piece_sprites = {
@@ -47,29 +48,20 @@ class PieceSprite(pygame.sprite.Sprite):
         'k': 'BlackKing.png'
     }
 
-    def __init__(self, symbol, x, y, square, background, size, dir='img'):
-        """ Load a chess piece sprite. 
+    def __init__(self, symbol, x, y, square, size, dir='img'):
+        """ Constructor for PieceSprite. 
         
         Args: symbol (str): Character representing a piece.
               x (int): x-coordinate of the sprite's Rect.
               y (int): y-coordinate of the sprite's Rect.
               square (int, int): Current square of the piece.
-              background (rgb tuple): Background colour.
-              size (int): Width/height of square/
+              size (int): Width/height of square.
               dir (str): Directory containing the image files.
         
         """
         super().__init__()
 
-        filename = PieceSprite.piece_sprites[symbol]
-        file = os.path.join(dir, filename)
-        picture = pygame.image.load(file)
-        self.image = pygame.transform.scale(picture, (size, size))
-        # Convert to the correct pixel format
-        self.image.convert() 
-        
-        # Set the transparent background colour
-        self.image.set_colorkey(background)
+        self.load_image(symbol, size, dir)
 
         # Fetch the rectangle object with dimensions of the loaded image.
         self.rect = self.image.get_rect()
@@ -80,9 +72,23 @@ class PieceSprite(pygame.sprite.Sprite):
         self.rect.y = y
         self.selected = False
 
-    def deselect(self):
-        """ Set 'selected' attribute to False. """
-        self.selected = False
+    def load_image(self, symbol, size, dir='img'):
+        """ Load a chess piece sprite. 
+        
+        Args: symbol (str): Character representing a piece.
+              size (int): Width/height of square.
+              dir (str): Directory containing the image files.
+        """
+
+        filename = PieceSprite.piece_sprites[symbol]
+        file = os.path.join(dir, filename)
+        picture = pygame.image.load(file)
+        self.image = pygame.transform.scale(picture, (size, size))
+        # Convert to the correct pixel format
+        self.image.convert() 
+        # Set the transparent background colour
+        self.image.set_colorkey(WHITE)
+
     
     def update(self, location, square, promotion=None):
         """ Update the piece's location.
@@ -97,12 +103,13 @@ class PieceSprite(pygame.sprite.Sprite):
         if location[1] < 0 or location[1] > BOARD_SIZE:
             return
 
+        if promotion is not None:
+            self.load_image(symbol, SQUARE_SIZE)
+
         self.rect.x = location[0]
         self.rect.y = location[1]
         self.piece.square = square
 
-        #TODO: Implement promotion (load new sprite to piece.image)
-                        
 
 class Board(position.Position):
     """ Graphical chess board. Subclass of Position.
@@ -111,50 +118,47 @@ class Board(position.Position):
         light: (rgb tuple): Colour of the light squares.
         dark: (rgb tuple): Colour of the dark squares.
         board_rect (pygame.Rect): Rect describing the chessboard region.
-        text_rect (pygame.Rect): Rect describing the textbox region.
         piece_list: Group of PieceSprite objects representing all
                     the pieces on the board.
         moving_pieces: Group of PieceSprite objects to be moved.
         updated_rects: List of Rects to be updated on the next frame.
-
-    Methods: populate_piece_list, draw_board, get_square, get_corner,
-             reset_square, update_board, whole_board_update, 
-             clear_updated_rects, print_to_screen, erase_text
+        text_box (graphics.TextBox): Text box object.
+        
+    Methods: add_sprites, draw, square_from_cursor, coordinates_from_square,
+             clear_square, update, whole_board_update, clear_updated_rects,
     """
-
-    SQUARE_SIZE = BOARD_SIZE//8
 
     def __init__(self, fen): 
         super().__init__(fen)
         self.light = WHITE
         self.dark = BLUE
         self.board_rect = pygame.Rect(0, 0, BOARD_SIZE, BOARD_SIZE)
-        self.text_rect = pygame.Rect(
-            0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE
-        )
         self.piece_list = pygame.sprite.Group()
         self.moving_pieces = pygame.sprite.Group()
         self.updated_rects = []
+        text_rect = pygame.Rect(
+            0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE
+        )
+        self.textbox = TextBox(text_rect, self.dark)
 
-    def populate_piece_list(self):
-        """ Initialise the PieceSprite objects for every piece.
+    def add_sprites(self):
+        """ Initialise the PieceSprite objects for every piece on the board.
         
             The attributes (x, y) specify the coordinates of the top
             left corner of the square occupied by the piece. """
         for row, rank in enumerate(self.board):
             # y-coordinate of top border of the row 
-            y = Board.SQUARE_SIZE * row      
+            y = SQUARE_SIZE * row      
             for column, symbol in enumerate(rank):
                 # x-coordinate of left border of the column
-                x = Board.SQUARE_SIZE * column
+                x = SQUARE_SIZE * column
                 if symbol.isalpha():
                     piece_sprite = PieceSprite(
-                        symbol, x, y, (row, column), self.light, 
-                        Board.SQUARE_SIZE
+                        symbol, x, y, (row, column), SQUARE_SIZE
                     )
                     self.piece_list.add(piece_sprite)
 
-    def draw_board(self, screen, size):
+    def draw(self, screen, size):
         """ Draw a chessboard.
 
         Args: screen: pygame surface.
@@ -176,19 +180,15 @@ class Board(position.Position):
                     dark_square = (x, y, square_size, square_size)
                     pygame.draw.rect(screen, self.dark, dark_square) 
 
-        draw_squares(Board.SQUARE_SIZE, 0, Board.SQUARE_SIZE)
-        draw_squares(Board.SQUARE_SIZE, Board.SQUARE_SIZE, 0)
+        draw_squares(SQUARE_SIZE, 0, SQUARE_SIZE)
+        draw_squares(SQUARE_SIZE, SQUARE_SIZE, 0)
         
         self.piece_list.draw(screen)
 
-        # Draw the text box at the bottom of the screen
-        pygame.draw.line(screen, BLACK, (0, BOARD_SIZE), 
-                         (SCREEN_WIDTH, BOARD_SIZE), 5)
+        self.textbox.draw(screen)
 
-        pygame.draw.rect(screen, self.dark, self.text_rect) 
-
-    def get_square(self, pos):
-        """ Return row and column of square pointed at by cursor
+    def square_from_cursor(self, pos):
+        """ Return row and column of square pointed at by cursor.
         
         Args: pos (int, int): (x, y) position of the mouse cursor.
         """
@@ -196,23 +196,23 @@ class Board(position.Position):
             if point == BOARD_SIZE:
                 return 7
             else:
-                return point // Board.SQUARE_SIZE
+                return point // SQUARE_SIZE
         
         row = get_coordinate(pos[1])
         column = get_coordinate(pos[0])
 
         return (row, column)
 
-    def get_coordinates(self, square):
+    def coordinates_from_square(self, square):
         """ Return top left corner coordinates of a square. 
         
         Args: square (int, int): Array indices of a square. 
         """
-        x = square[1] * Board.SQUARE_SIZE
-        y = square[0] * Board.SQUARE_SIZE
-        return (x, y)
+        x = square[1] * SQUARE_SIZE
+        y = square[0] * SQUARE_SIZE
+        return x, y
     
-    def reset_square(self, screen, square):
+    def clear_square(self, screen, square):
         """ Redraw the background of a square. Return the modified Rect.
 
         Args: screen: The active pygame surface.
@@ -224,11 +224,10 @@ class Board(position.Position):
             colour = self.dark
         
         # Get top left corner coordinates of the square.
-        corner = self.get_coordinates(square)
+        corner = self.coordinates_from_square(square)
         
         erased_rect = pygame.Rect(
-            corner[0], corner[1], Board.SQUARE_SIZE,
-            Board.SQUARE_SIZE
+            corner[0], corner[1], SQUARE_SIZE, SQUARE_SIZE
         )
         pygame.draw.rect(screen, colour, erased_rect)
 
@@ -244,7 +243,7 @@ class Board(position.Position):
             if piece_sprite.rect.collidepoint(pos):
                 piece_sprite.selected = True
 
-    def make_move(self, screen, pos):
+    def process_move(self, screen, pos):
         """ Test move according to mouse movement.
             Call function to update board if move is valid. 
 
@@ -252,23 +251,30 @@ class Board(position.Position):
               pos (int, int): Coordinates of mouse cursor.
 
         """
+        if not self.board_rect.collidepoint(pos):
+            return None
+
         selected_sprite = None
         for piece_sprite in self.piece_list:
             if piece_sprite.selected:
                 selected_sprite = piece_sprite
         if selected_sprite is None: 
-            return
+            return None
 
-        dest_square = self.get_square(pos)
+        dest_square = self.square_from_cursor(pos)
         selected = selected_sprite.piece
 
-        if selected.is_legal_move(self, dest_square):
-            updated_squares = self.update_position(
-                selected.symbol, selected.square, dest_square
-            )
-            self.update_board(screen, updated_squares)
+        if selected.legal_move(self, dest_square):
+            return selected.symbol, selected.square, dest_square
         else:
             selected_sprite.selected = False
+            return None
+
+    def find_piece_on_square(self, square):
+        for piece_sprite in self.piece_list:
+            if piece_sprite.piece.square == square:
+                return piece_sprite
+        return
 
     def update_board(self, screen, updated_squares):
         """ Update the graphical board. 
@@ -278,26 +284,25 @@ class Board(position.Position):
                   Object describing squares to modify.
         """
         self.moving_pieces.empty()
+
+        moving_pieces, clear_square = updated_squares
     
         # Delete captured piece sprite.
-        if updated_squares.clear is not None:
-            for piece_sprite in self.piece_list:
-                if piece_sprite.piece.square == updated_squares.clear:
-                    self.piece_list.remove(piece_sprite)
-                    dest_rect = self.reset_square(screen, updated_squares.clear)
-                    self.updated_rects.append(dest_rect)
+        captured_piece = self.find_piece_on_square(clear_square)
+        self.piece_list.remove(captured_piece)
+        dest_rect = self.clear_square(screen, clear_square)
+        self.updated_rects.append(dest_rect)
 
         # Update squares and sprites for moving pieces.
-        for move in updated_squares.moving_pieces:
-            for piece_sprite in self.piece_list:
-                if piece_sprite.piece.square == move[0]:
-                    src_rect = self.reset_square(screen, move[0])
-                    self.updated_rects.append(src_rect)
-                    location = self.get_coordinates(move[1])
-                    piece_sprite.update(location, move[1])
-                    piece_sprite.selected = False
-                    self.moving_pieces.add(piece_sprite)
-                    self.moving_pieces.draw(screen)
+        for move in moving_pieces:
+            moving_piece = self.find_piece_on_square(move[0])
+            src_rect = self.clear_square(screen, move[0])
+            self.updated_rects.append(src_rect)
+            location = self.coordinates_from_square(move[1])
+            moving_piece.update(location, move[1])
+            moving_piece.selected = False
+            self.moving_pieces.add(moving_piece)
+            self.moving_pieces.draw(screen)
 
     def whole_board_update(self):
         """ Return True if the entire surface needs to be updated. """
@@ -307,27 +312,59 @@ class Board(position.Position):
         """ Empty the updated_rects field. """
         self.updated_rects = []
 
-    def print_to_screen(self, screen, text, x_offset, y_offset):
-        """ Print text to the screen below the chessboard.
+        
+class TextBox:
+    """ Describes and manages the text box below the chess board.
+
+    Attributes:
+        text_rect (pygame.Rect): Rect describing the text box region.
+        border ((int, int), (int, int):
+            Start and end coordinates of the border line.
+        colour (rgb tuple): Background colour.
+        font (pygame.Font): Text font.
+        self.x_offset: Horizontal distance of next blank line,
+                       from left of text_rect.
+        self.y_offset: Vertical distance of next blank line,
+                       from top of text_rect.
+        
+    Methods: draw, print, clear
+    
+    """
+    def __init__(self, rect, colour):
+        self.rect = rect
+        self.border = ( (rect.left, rect.top+2),
+                        (rect.left + rect.width, rect.top+2) )
+        self.colour = colour
+        self.font = pygame.font.SysFont('Arial', 16)
+        self.x_offset = 20
+        self.y_offset = BOARD_SIZE + 20
+
+    def draw(self, screen):
+        """ Draw the text box.
 
         Args: screen: Active pygame surface.
-              text (str): Text to print.
-              x_offset (int): Distance of text from left side of screen.
-              y_offset (int): Distance of text from the top of the text area.
         
         """
-        text_font = pygame.font.SysFont('Arial', 16)
-        screen_text = text_font.render(text, True, BLACK)
-        screen.blit(screen_text, (x_offset, BOARD_SIZE + y_offset))
+        pygame.draw.rect(screen, self.colour, self.rect) 
+        pygame.draw.line(screen, BLACK, self.border[0], self.border[1], 5)
 
-    def erase_text(self, screen):
-        """ Clears the text area. 
+    def print(self, screen, text):
+        """ Print text in the text box.
 
         Args: screen: Active pygame surface.
-              colour (rgb tuple): Colour of background of text area.
+              text (str): Text to print.        
+        """
+        screen_text = self.font.render(text, True, BLACK)
+        screen.blit(screen_text, (self.x_offset, self.y_offset))
+        self.y_offset += 20
+
+    def clear(self, screen):
+        """ Clear the text box. 
+
+        Args: screen: Active pygame surface.
 
         """
-        text_rect = (0, BOARD_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT - BOARD_SIZE)
-        pygame.draw.rect(screen, self.dark, text_rect) 
-        
-
+        pygame.draw.rect(screen, self.colour, self.rect) 
+        pygame.draw.line(screen, BLACK, self.border[0], self.border[1], 10)
+        self.x_offset = 20
+        self.y_offset = BOARD_SIZE + 20

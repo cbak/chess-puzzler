@@ -16,8 +16,8 @@ def main():
     running = True
     clock = pygame.time.Clock()
     board = graphics.Board(position.FEN_START)
-    board.populate_piece_list()
-    board.draw_board(screen, graphics.BOARD_SIZE)
+    board.add_sprites()
+    board.draw(screen, graphics.BOARD_SIZE)
 
     while running:
         for event in pygame.event.get():
@@ -30,8 +30,10 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 board.select_piece(event.pos)
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                if board.board_rect.collidepoint(event.pos):
-                    board.make_move(screen, event.pos)
+                move_data = board.process_move(screen, event.pos)
+                if move_data is not None:
+                    updated_squares = board.update_position(move_data)
+                    board.update_board(screen, updated_squares)
 
         # Update the screen
         if board.whole_board_update():

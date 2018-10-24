@@ -3,7 +3,6 @@ Defines a class ChessPosition that represents static chess position.
 """
 
 import re
-import sys
 
 FEN_START = (
     'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
@@ -20,7 +19,8 @@ class Position:
         en_passant (str): The square on which an en passant capture can
                           be made on the following move (if any).
 
-    Methods: print_board, print_info, print_position
+    Methods: square, algebraic, update_position, print_board, print_info, 
+             print_position
 
     """ 
     FEN_REGEX = (
@@ -44,39 +44,49 @@ class Position:
         rows[7] = data[0]
         for cur_row, row in enumerate(rows):
             cur_col = 0
-            for c in row:
-                if c.isalpha():
+            for entry in row:
+                if entry.isalpha():
                     if cur_col >= 8:
                         raise ValueError('Invalid FEN: too many columns.')
-                    self.board[cur_row][cur_col] = c
+                    self.board[cur_row][cur_col] = entry
                     cur_col += 1
-                elif c.isdigit():
-                    cur_col += int(c)
+                elif entry.isdigit():
+                    cur_col += int(entry)
 
         self.turn = data[1]
         self.castling = data[2]
         self.en_passant = data[3]
     
-    def algebraic_to_square(self, coordinates):
-        row = 8 - int(coordinates[1])
-        column = ord(coordinates[0]) - ord('a')
+    def square(self, algebraic):
+        """ Translate square to array coordinates. 
+        
+        Arg: algebraic (string): Algebraic coordinates of a square. """
+        row = 8 - int(algebraic[1])
+        column = ord(algebraic[0]) - ord('a')
         return (row, column)
 
-    def square_to_algebraic(self, square):
+    def algebraic(self, square):
+        """ Translate square to algebraic coordinates.
+
+        Args: square (int, int): Array coordinates of a square. """
         rank = str(8 - square[0])
         file = chr(ord('a') + square[1])
         return file + rank
 
-    def update_position(self, symbol, start, end):
+    def update_position(self, move_data):
         """ Update the position according to a move.
             Return the updated squares.
-        """
-        updated = UpdatedSquares()
 
+        Args: move_data: Tuple containing the piece symbol,
+                         start square, and end square.
+        """
+        symbol, start, end = move_data 
+        
         self.board[start[0]][start[1]] = '-'
         self.board[end[0]][end[1]] = symbol
-        updated.add_moved_piece(start, end)
-        updated.set_clear_square(end)
+
+        moving_pieces = [(start, end)]
+        clear_square = end
 
         if self.turn == 'w':
             self.turn = 'b'
@@ -84,25 +94,23 @@ class Position:
             self.turn = 'w'
 
         # Process en passant capture.
-        if self.square_to_algebraic(end) == self.en_passant:
+        if self.algebraic(end) == self.en_passant:
             if symbol == 'P':
                 self.board[end[0]+1][end[1]] = '-'
-                updated.set_clear_square((end[0]+1, end[1]))
+                clear_square = (end[0]+1, end[1])
             elif symbol == 'p':
                 self.board[end[0]-1][end[1]] = '-'
-                updated.set_clear_square((end[0]-1, end[1]))
-            else:
-                raise ValueError('Piece moved to en passant square not a pawn.')
+                clear_square = (end[0]-1, end[1])
             
         # Update en passant square.
         if symbol == 'P' and start[0] == 6 and end[0] == 4:
-            self.en_passant = self.square_to_algebraic((5, start[1]))
+            self.en_passant = self.algebraic((5, start[1]))
         elif symbol == 'p' and start[0] == 1 and end[0] == 3:
-            self.en_passant = self.square_to_algebraic((2, start[1]))
+            self.en_passant = self.algebraic((2, start[1]))
         else:
             self.en_passant = '-'
 
-        return updated
+        return moving_pieces, clear_square
         
     def print_board(self):
         """Print the chess position."""
@@ -127,21 +135,3 @@ class Position:
         self.print_info()
         print(' ')
 
-class UpdatedSquares:
-    """ Describes squares that are updated in a single move.
-
-    Attributes: 
-        moving_pieces ((int, int)[]): start and end squares of pieces to move.
-        clear (int, int): square containing a captured piece.
-            Only possible to capture one piece in a single move.
-    """
-    def __init__(self):
-        self.moving_pieces = []
-        self.clear = None
-
-    def add_moved_piece(self, start, end):
-        self.moving_pieces.append((start, end))
-
-    def set_clear_square(self, square):
-        self.clear = square
-        

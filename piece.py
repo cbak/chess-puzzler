@@ -36,14 +36,14 @@ class Piece(ABC):
         square (int, int): current location of the piece.
 
     Methods:
-        calculate_scope, is_legal_move, generate_diagonals, generate_lines,
-        test_and_add_squares, test_and_add_squares_until
+        calculate_scope, legal_move, generate_diagonals, generate_lines,
+        test_square, test_squares_until
     """
     @abstractmethod
     def calculate_scope(self, position):
         pass
 
-    def is_legal_move(self, position, dest_square):
+    def legal_move(self, position, dest_square):
         """ Return True if the move is legal, False otherwise. 
 
         Args: position (Position): Current position.
@@ -82,42 +82,41 @@ class Piece(ABC):
         
         return lines
 
-    def test_and_add_square(self, scope, board, row, col, test):
-        """ Add a square to the scope if it passes a test. 
-            Return True if the square passes the test. False otherwise.
+    def test_square(self, board, row, col, test):
+        """ Return True if the square passes the test. 
+            Return False if the coordinates are out of bounds or if the
+            square fails the test.
         
-        Args: scope ((int, int)[]): List of squares in a piece's range.
-              board (str[][]): Textual representation of a chess position.
+        Args: board (str[][]): Textual representation of a chess position.
               row (int): First index of square.
               col (int): Second index square.
-              test (str -> bool): If True, add the square to the scope.
+              test (str -> bool): Test to perform on the square.
         """
         if row < 0 or row > 7:
             return False
         if col < 0 or col > 7:
             return False
             
-        if test(board[row][col]):
-            scope.append((row, col))
-            return True
-        else:
-            return False
+        return test(board[row][col])
+ 
+    def test_squares_until(self, board, squares, test, stop):
+        """ Test a sequence of squares until failure. 
+            Return the passing squares.
 
-    def test_and_add_squares_until(self, scope, board, squares, test, fail):
-        """ Test and add a sequence of squares to scope until failure.
-
-        Args: scope ((int, int)[]): List of squares in a piece's range.
-              board (str[][]): Textual representation of a chess position.
+        Args: board (str[][]): Textual representation of a chess position.
               squares: Generator of squares created by self.generate_diagonals
                        or self.generate_lines
               test (str -> bool): If True, add the square to the scope.
-              fail (str -> bool): If False, don't test any more squares.  
+              stop (str -> bool): If False, don't test any more squares.  
         """
+        valid_squares = []
         for (row, col) in squares:
-            result = self.test_and_add_square(scope, board, row, col, test)
-            if result == False or fail(board[row][col]):
+            result = self.test_square(board, row, col, test)
+            if result == True:
+                valid_squares.append((row, col))
+            if result == False or stop(board[row][col]):
                 break
-
+        return valid_squares
 
 class Pawn(Piece):
     """ Class representing a pawn. Subclass of Piece. 
@@ -139,7 +138,7 @@ class Pawn(Piece):
         row = self.square[0]
         col = self.square[1]
 
-        # Unlike other chess pieces, pawns do not move and capture in 
+        # Unlike the other chess pieces, pawns do not move and capture in 
         # the same way. Define a dedicated helper function to test 
         # the appropriate squares.
         def test_and_add_squares(up_one, up_two, second_row, test):
@@ -156,7 +155,7 @@ class Pawn(Piece):
                 scope.append((up_one, col+1))
             # Check the en passant square. If it exists, test if it is empty.
             if position.en_passant != '-':
-                square = position.algebraic_to_square(position.en_passant)
+                square = position.square(position.en_passant)
                 if col != 0 and square == (up_one, col-1):
                     scope.append((up_one, col-1))
                 if col != 7 and square == (up_one, col+1):
@@ -190,18 +189,26 @@ class Knight(Piece):
         row = self.square[0]
         col = self.square[1]
         if self.symbol.isupper():
-            is_free_square = lambda x : x == '-' or x.islower()
+            free_square = lambda x : x == '-' or x.islower()
         if self.symbol.islower():
-            is_free_square = lambda x : x == '-' or x.isupper()
+            free_square = lambda x : x == '-' or x.isupper()
 
-        self.test_and_add_square(scope, board, row+1, col+2, is_free_square)
-        self.test_and_add_square(scope, board, row+2, col+1, is_free_square)
-        self.test_and_add_square(scope, board, row+2, col-1, is_free_square)
-        self.test_and_add_square(scope, board, row+1, col-2, is_free_square)
-        self.test_and_add_square(scope, board, row-1, col-2, is_free_square)
-        self.test_and_add_square(scope, board, row-2, col-1, is_free_square)
-        self.test_and_add_square(scope, board, row-2, col+1, is_free_square)
-        self.test_and_add_square(scope, board, row-1, col+2, is_free_square)
+        if self.test_square(board, row+1, col+2, free_square):
+            scope.append((row+1, col+2))
+        if self.test_square(board, row+2, col+1, free_square):
+            scope.append((row+2, col+1))
+        if self.test_square(board, row+2, col-1, free_square):
+            scope.append((row+2, col-1))
+        if self.test_square(board, row+1, col-2, free_square):
+            scope.append((row+1, col-2))
+        if self.test_square(board, row-1, col-2, free_square):
+            scope.append((row-1, col-2))
+        if self.test_square(board, row-2, col-1, free_square):
+            scope.append((row-2, col-1))
+        if self.test_square(board, row-2, col+1, free_square):
+            scope.append((row-2, col+1))
+        if self.test_square(board, row-1, col+2, free_square):
+            scope.append((row-1, col+2))
 
         return scope
 
@@ -226,18 +233,17 @@ class Bishop(Piece):
         row = self.square[0]
         col = self.square[1]
         if self.symbol.isupper():
-            is_free_square = lambda x : x == '-' or x.islower()
+            free_square = lambda x : x == '-' or x.islower()
             capture = lambda x : x.islower()
         if self.symbol.islower():
-            is_free_square = lambda x : x == '-' or x.isupper()
+            free_square = lambda x : x == '-' or x.isupper()
             capture = lambda x : x.isupper()
 
         diagonals = self.generate_diagonals()
-
         for diagonal in diagonals:
-            self.test_and_add_squares_until(
-                scope, board, diagonal, is_free_square, capture
-            )
+            squares = self.test_squares_until(board, diagonal, free_square,
+                                              capture)
+            scope.extend(squares)
         return scope
 
 
@@ -261,18 +267,17 @@ class Rook(Piece):
         row = self.square[0]
         col = self.square[1]
         if self.symbol.isupper():
-            is_free_square = lambda x : x == '-' or x.islower()
+            free_square = lambda x : x == '-' or x.islower()
             capture = lambda x : x.islower()
         if self.symbol.islower():
-            is_free_square = lambda x : x == '-' or x.isupper()
+            free_square = lambda x : x == '-' or x.isupper()
             capture = lambda x : x.isupper()
 
         lines = self.generate_lines()
-
         for line in lines:
-            self.test_and_add_squares_until(
-                scope, board, line, is_free_square, capture
-            )
+            squares = self.test_squares_until(board, line, free_square, 
+                                              capture)
+            scope.extend(squares)
         return scope
 
 
@@ -296,22 +301,24 @@ class Queen(Piece):
         row = self.square[0]
         col = self.square[1]
         if self.symbol.isupper():
-            is_free_square = lambda x : x == '-' or x.islower()
+            free_square = lambda x : x == '-' or x.islower()
             capture = lambda x : x.islower()
         if self.symbol.islower():
-            is_free_square = lambda x : x == '-' or x.isupper()
+            free_square = lambda x : x == '-' or x.isupper()
             capture = lambda x : x.isupper()
 
         diagonals = self.generate_diagonals()
         for diagonal in diagonals:
-            self.test_and_add_squares_until(
-                scope, board, diagonal, is_free_square, capture
-            )
+            squares = self.test_squares_until(board, diagonal, free_square,
+                                              capture)
+            scope.extend(squares)
+
         lines = self.generate_lines()
         for line in lines:
-            self.test_and_add_squares_until(
-                scope, board, line, is_free_square, capture
-            )
+            squares = self.test_squares_until(board, line, free_square, 
+                                              capture)
+            scope.extend(squares)
+
         return scope
 
 
@@ -335,17 +342,25 @@ class King(Piece):
         row = self.square[0]
         col = self.square[1]
         if self.symbol.isupper():
-            is_free_square = lambda x : x == '-' or x.islower()
+            free_square = lambda x : x == '-' or x.islower()
         if self.symbol.islower():
-            is_free_square = lambda x : x == '-' or x.isupper()
+            free_square = lambda x : x == '-' or x.isupper()
 
-        self.test_and_add_square(scope, board, row,   col+1, is_free_square)
-        self.test_and_add_square(scope, board, row+1, col+1, is_free_square)
-        self.test_and_add_square(scope, board, row+1, col,   is_free_square)
-        self.test_and_add_square(scope, board, row+1, col-1, is_free_square)
-        self.test_and_add_square(scope, board, row,   col-1, is_free_square)
-        self.test_and_add_square(scope, board, row-1, col-1, is_free_square)
-        self.test_and_add_square(scope, board, row-1, col,   is_free_square)
-        self.test_and_add_square(scope, board, row-1, col+1, is_free_square)
-
+        if self.test_square(board, row,   col+1, free_square):
+            scope.append((row, col+1))
+        if self.test_square(board, row+1, col+1, free_square):
+            scope.append((row+1, col+1))
+        if self.test_square(board, row+1, col,   free_square):
+            scope.append((row+1, col))
+        if self.test_square(board, row+1, col-1, free_square):
+            scope.append((row+1, col-1))
+        if self.test_square(board, row,   col-1, free_square):
+            scope.append((row, col-1))
+        if self.test_square(board, row-1, col-1, free_square):
+            scope.append((row-1, col-1))
+        if self.test_square(board, row-1, col,   free_square):
+            scope.append((row-1, col))
+        if self.test_square(board, row-1, col+1, free_square):
+            scope.append((row-1, col+1))
+            
         return scope
