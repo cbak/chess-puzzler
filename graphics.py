@@ -250,7 +250,7 @@ class Board(position.Position):
 
     def process_move(self, screen, pos):
         """ Test a move indicated by user mouse movement.
-            Return move data (piece symbol, start square, end square). 
+            Return move data (piece object, end square). 
 
         Args: screen: Active pygame surface.
               pos (int, int): Coordinates of mouse cursor.
@@ -270,7 +270,7 @@ class Board(position.Position):
         selected = selected_sprite.piece
 
         if selected.legal_move(self, dest_square):
-            return selected.symbol, selected.square, dest_square
+            return selected_sprite, dest_square
         else:
             selected_sprite.selected = False
             PieceSprite.selected_count -= 1
@@ -287,33 +287,55 @@ class Board(position.Position):
                 return piece_sprite
         return
 
-    def update_board(self, screen, updated_squares):
+    def move_piece(self, screen, piece_sprite, end):
+        """ Move a piece sprite to the 'end' square. 
+
+            Args: screen: Active pygame surface.
+                  piece_sprite: Sprite to move.
+                  end (int, int): Destination coordinates.
+
+        """
+        start = piece_sprite.piece.square
+        src_rect = self.clear_square(screen, start)
+        self.updated_rects.append(src_rect)
+        location = self.coordinates_from_square(end)
+        piece_sprite.update(location, end)
+        piece_sprite.selected = False
+        PieceSprite.selected_count -= 1
+
+    def update_board(self, screen, board_update_data):
         """ Update the graphical board. 
 
         Args: screen: Active pygame surface.
-              updated_squares: tuple describing the squares to update.
+              board_update_data: tuple describing the updates:
+                  piece_sprite: piece sprite to move
+                  end: destination square
+                  capture: square of captured piece. None if no capture.
+                  castle: (start, end) square of second moving piece.
+                            None if the move made is not castling.
+
         """
+        piece_sprite, end, capture, castle = board_update_data
+    
         self.moving_pieces.empty()
 
-        moving_pieces, clear_square = updated_squares
-    
-        # Delete captured piece sprite.
-        captured_piece = self.find_piece_on_square(clear_square)
-        self.piece_list.remove(captured_piece)
-        dest_rect = self.clear_square(screen, clear_square)
-        self.updated_rects.append(dest_rect)
+        if capture is not None:
+            # Delete captured piece sprite.
+            captured_piece = self.find_piece_on_square(capture)
+            captured_piece.piece.remove()
+            self.piece_list.remove(captured_piece)
+            dest_rect = self.clear_square(screen, capture)
+            self.updated_rects.append(dest_rect)
 
-        # Update squares and sprites for moving pieces.
-        for move in moving_pieces:
-            moving_piece = self.find_piece_on_square(move[0])
-            src_rect = self.clear_square(screen, move[0])
-            self.updated_rects.append(src_rect)
-            location = self.coordinates_from_square(move[1])
-            moving_piece.update(location, move[1])
-            moving_piece.selected = False
-            PieceSprite.selected_count -= 1
-            self.moving_pieces.add(moving_piece)
-            self.moving_pieces.draw(screen)
+        self.move_piece(screen, piece_sprite, end)
+        self.moving_pieces.add(piece_sprite)
+        
+        if castle is not None:
+            castling_piece = self.find_piece_on_square(castle[0])
+            self.move_piece(screen, castling_piece, castle[1])
+            self.moving_pieces.add(castling_sprite)
+        
+        self.moving_pieces.draw(screen)
 
     def whole_board_update(self):
         """ Return True if the entire surface needs to be updated. """

@@ -28,6 +28,11 @@ class PieceFactory:
         return piece_class(symbol, square)
 
 
+class PieceIterator:
+    def __iter__(cls):
+        return iter(cls._pieces)
+
+
 class Piece(ABC):
     """ Abstract class representing a chess piece.
 
@@ -36,12 +41,18 @@ class Piece(ABC):
         square (int, int): current location of the piece.
 
     Methods:
-        calculate_scope, legal_move, generate_diagonals, generate_lines,
-        test_square, test_squares_until
+        calculate_scope, remove, legal_move, generate_diagonals, 
+        generate_lines, test_square, test_squares_until
     """
+    __metaclass__ = PieceIterator
+    _pieces = []
+
     @abstractmethod
     def calculate_scope(self, position):
         pass
+
+    def remove(self):
+        self._pieces.remove(self)
 
     def legal_move(self, position, dest_square):
         """ Return True if the move is legal, False otherwise. 
@@ -131,6 +142,7 @@ class Pawn(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol
         self.square = square
+        self._pieces.append(self)
     
     def calculate_scope(self, position):
         scope = []
@@ -182,6 +194,7 @@ class Knight(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
+        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -226,6 +239,7 @@ class Bishop(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
+        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -260,6 +274,7 @@ class Rook(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
+        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -294,6 +309,7 @@ class Queen(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
+        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -335,6 +351,7 @@ class King(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
+        self._pieces.append(self)
         
     def calculate_scope(self, position):
         scope = []

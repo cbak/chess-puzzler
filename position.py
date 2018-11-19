@@ -75,18 +75,27 @@ class Position:
 
     def update_position(self, move_data):
         """ Update the position according to a move.
-            Return the updated squares.
+            Return data to be used in updating graphical board:
+               piece_sprite: piece sprite to move
+               end: destination square
+               capture: square of captured piece. None if no capture.
+               castle: (start, end) square of second moving piece.
+                         None if the move made is not castling.
 
-        Args: move_data: Tuple containing the piece symbol,
-                         start square, and end square.
+        Args: move_data: Tuple containing the piece sprite and end square.
         """
-        symbol, start, end = move_data 
+        piece_sprite, end = move_data 
+        start = piece_sprite.piece.square
+        symbol = piece_sprite.piece.symbol
+        castle = None
         
+        if self.board[end[0]][end[1]] == '-':
+            capture = None
+        else:
+            capture = end
+            
         self.board[start[0]][start[1]] = '-'
         self.board[end[0]][end[1]] = symbol
-
-        moving_pieces = [(start, end)]
-        clear_square = end
 
         if self.turn == 'w':
             self.turn = 'b'
@@ -97,11 +106,11 @@ class Position:
         if self.algebraic(end) == self.en_passant:
             if symbol == 'P':
                 self.board[end[0]+1][end[1]] = '-'
-                clear_square = (end[0]+1, end[1])
+                capture = (end[0]+1, end[1])
             elif symbol == 'p':
                 self.board[end[0]-1][end[1]] = '-'
-                clear_square = (end[0]-1, end[1])
-            
+                capture = (end[0]-1, end[1])
+
         # Update en passant square.
         if symbol == 'P' and start[0] == 6 and end[0] == 4:
             self.en_passant = self.algebraic((5, start[1]))
@@ -110,7 +119,7 @@ class Position:
         else:
             self.en_passant = '-'
 
-        return moving_pieces, clear_square
+        return piece_sprite, end, capture, castle
         
     def print_board(self):
         """Print the chess position."""

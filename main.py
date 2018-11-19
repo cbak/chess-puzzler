@@ -32,8 +32,8 @@ def main():
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 move_data = board.process_move(screen, event.pos)
                 if move_data is not None:
-                    updated_squares = board.update_position(move_data)
-                    board.update_board(screen, updated_squares)
+                    board_update_data = board.update_position(move_data)
+                    board.update_board(screen, board_update_data)
 
         # Update the screen
         if board.whole_board_update():
