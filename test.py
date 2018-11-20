@@ -34,7 +34,7 @@ class TestPosition(unittest.TestCase):
         ),
 
         ('r2qk2r/pp3ppp/2nb1n2/2p1p3/2PpP1b1/3P1NP1/PP2NPBP/'
-         'R1BQ1RK1 b kq c3 0 9',
+         'R1BQ1RK1 b kq c3 0 1',
          [['r', '-', '-', 'q', 'k', '-', '-', 'r'],
           ['p', 'p', '-', '-', '-', 'p', 'p', 'p'],
           ['-', '-', 'n', 'b', '-', 'n', '-', '-'],
@@ -78,8 +78,10 @@ class TestPosition(unittest.TestCase):
     ]
 
     def test_make_and_undo_move(self):
+        pass
 
     def test_is_check(self):
+        pass
 
     def test_fen_to_board(self):
         """Test the board generation from FEN input.
@@ -91,6 +93,12 @@ class TestPosition(unittest.TestCase):
         for fen, board in self.FEN_POSITIONS:
             test_position = position.Position(fen)
             self.assertEqual(test_position.board, board)
+
+    def test_generate_fen(self):
+        for fen, board in self.FEN_POSITIONS:
+            test_position = position.Position(fen)
+            new_fen = test_position.generate_fen()
+            self.assertEqual(new_fen, fen)
 
     def test_bad_fens(self):
         """Test incorrect FEN strings."""

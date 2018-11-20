@@ -14,6 +14,7 @@ class Position:
     """Represents a static chess position.
 
     Attributes:
+        FEN (str): FEN representation of a chess position.
         board (str[][]): Textual representation of a chess position.
         turn (str): The player to move ('w' or 'b').
         castling (str): The castling rights of both players.
@@ -22,8 +23,8 @@ class Position:
         white_king (int, int): Location of the white king.
         black_king (int, int): Location of the black king.
 
-    Methods: square, algebraic, update_position, print_board, print_info, 
-             print_position
+    Methods: generate_fen, square, algebraic, update_position, print_board,
+             print_info, print_position
 
     """ 
     FEN_REGEX = (
@@ -41,6 +42,7 @@ class Position:
         matchObj = re.match(Position.FEN_REGEX, fen)
         if not matchObj:
             raise ValueError('Invalid FEN.')
+        self.fen = fen
         white_king_count = 0
         black_king_count = 0
         self.board = [['-'] * 8 for i in range(8)]
@@ -73,7 +75,37 @@ class Position:
         self.turn = data[1]
         self.castling = data[2]
         self.en_passant = data[3]
-    
+
+    def generate_fen(self):
+        """ Generate FEN from the class attributes. """
+        fen = []
+        for cur_row, row in enumerate(self.board):
+            blanks = 0
+            for square in row:
+                if square.isalpha():
+                    if blanks > 0:
+                        fen.append(str(blanks))
+                        blanks = 0
+                    fen.append(square)
+                elif square == '-':
+                    blanks += 1
+                else:
+                    raise ValueError('Board corrupted.')
+            if blanks > 0:
+                fen.append(str(blanks))
+                blanks = 0
+            if cur_row < 7:
+                fen.append('/')
+            elif cur_row == 7:
+                fen.append(' ')
+
+        fen.append(self.turn + ' ')
+        fen.append(self.castling + ' ')
+        fen.append(self.en_passant + ' 0 1')
+
+        fen_string = ''.join(fen)
+        return fen_string
+
     def square(self, algebraic):
         """ Translate square to array coordinates. 
         
@@ -172,12 +204,13 @@ class Position:
         else:
             capture_square = None
 
+        self.fen = self.generate_fen()
+
         return piece_sprite, end, capture_square, castle
-        
+
     def print_board(self):
         """Print the chess position."""
-        for row in self.board:
-            print(row)
+        map(print, self.board)
 
     def print_info(self):
         """Print the FEN information."""
