@@ -60,10 +60,19 @@ class Piece(ABC):
         Args: position (Position): Current position.
               dest_square (int, int): Proposed destination square.
         """
-        if dest_square in self.calculate_scope(position):
-            return True
-        else:
+        if dest_square not in self.calculate_scope(position):
             return False
+        elif self.symbol.isupper() and position.turn != 'w':
+            return False
+        elif self.symbol.islower() and position.turn != 'b':
+            return False
+        else:
+           move_data = position.make_move(self, dest_square)
+           if position.is_check():
+               position.undo_move(move_data) 
+               return False
+           else:
+               return True
 
     def generate_diagonals(self):
         """ Return a list of generators of diagonals extending from the 

@@ -8,7 +8,7 @@ import unittest
 import piece
 import position
 
-class TestChessPosition(unittest.TestCase):
+class TestPosition(unittest.TestCase):
     FEN_POSITIONS = [ 
         ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
          'w KQkq - 0 1',
@@ -49,14 +49,17 @@ class TestChessPosition(unittest.TestCase):
     FEN_INFO = [
         ('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR '
          'w KQkq - 0 1',
-         'W to move.\nCastling: KQkq\n'),
+         'W to move.\nCastling: KQkq\n'
+         'White king is at (7, 4).\nBlack king is at (0, 4).\n'),
 
-        ('8/8/1q6/2k5/4k3/5Q2/8/8 w - - 0 1',
-         'W to move.\nNeither side can castle.\n'),
+        ('8/8/1q6/2k5/4K3/5Q2/8/8 w - - 0 1',
+         'W to move.\nNeither side can castle.\n'
+         'White king is at (4, 4).\nBlack king is at (3, 2).\n'),
 
         ('r2qk2r/pp3ppp/2nb1n2/2p1p3/2PpP1b1/3P1NP1/PP2NPBP/'
          'R1BQ1RK1 b kq c3 0 9',
-         'B to move.\nCastling: kq\nEn passant available on c3.\n')
+         'B to move.\nCastling: kq\nEn passant available on c3.\n'
+         'White king is at (7, 6).\nBlack king is at (0, 4).\n')
     ]
 
     BAD_FENS = [
@@ -67,9 +70,16 @@ class TestChessPosition(unittest.TestCase):
         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 1',
         'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkr - 0 1',
         'rnbqkbnr/ppppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        '8/8/8/8/2p5p/8/8/8 w - - 0 1',
+        'rnbqqbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQQBNR w KQkq - 0 1',
+        'rnbkkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKKBNR w KQkq - 0 1',
+        '8/8/8/8/2k5K/8/8/8 w - - 0 1',
         '8K/8Q/8R/8R/8N/8B/8P w - - 0 1'
     ]
+
+    def test_make_and_undo_move(self):
+
+    def test_is_check(self):
 
     def test_fen_to_board(self):
         """Test the board generation from FEN input.
