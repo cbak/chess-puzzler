@@ -77,7 +77,10 @@ class TestPosition(unittest.TestCase):
         '8K/8Q/8R/8R/8N/8B/8P w - - 0 1'
     ]
 
-    def test_make_and_undo_move(self):
+    def test_make_move(self):
+        pass
+
+    def test_undo_move(self):
         pass
 
     def test_is_check(self):

@@ -122,7 +122,7 @@ class Position:
         file = chr(ord('a') + square[1])
         return file + rank
 
-    def is_check(self):
+    def is_check(self, piece_list):
         if self.turn == 'w':
             king_square = self.white_king
             filter = lambda p : p.symbol.isupper()
@@ -130,13 +130,21 @@ class Position:
             king_square = self.black_king
             filter = lambda p : p.symbol.lower()
 
-        for pieceobject in piece.Piece:
-            if filter(pieceobject): 
+        for piece_sprite in piece_list:
+            piece = piece_sprite.piece
+            if filter(piece): 
                 continue
             if king_square in piece.calculate_scope(self):
                 return True
-
         return False
+
+    def is_legal_move(self, piece, end, piece_list):
+        move_data = self.make_move(piece, end)
+        if self.is_check(piece_list):
+            self.undo_move(move_data) 
+            return False
+        else:
+            return True
 
     def make_move(self, piece, end):
         """ Update the board. Return data to undo the update. """
@@ -160,6 +168,8 @@ class Position:
             elif symbol == 'p':
                 self.board[end[0]-1][end[1]] = '-'
                 capture = (end[0]-1, end[1]), self.board[end[0]-1][end[1]]
+
+        # TODO: Castling
 
         return start, symbol, end, capture, castle
 

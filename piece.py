@@ -28,10 +28,27 @@ class PieceFactory:
         return piece_class(symbol, square)
 
 
-class PieceIterator:
-    def __iter__(cls):
-        return iter(cls._pieces)
+class PieceList:
+    def __init__(self):
+        self.pieces = []
+        self.index = 0
 
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        try:
+            piece = self.pieces[self.index]
+        except IndexError:
+            raise StopIteration
+        self.index += 1
+        return piece
+
+    def add_piece(self, piece):
+        self.pieces.append(piece)
+
+    def remove_piece(self, piece):
+        self.pieces.remove(piece)
 
 class Piece(ABC):
     """ Abstract class representing a chess piece.
@@ -44,35 +61,25 @@ class Piece(ABC):
         calculate_scope, remove, legal_move, generate_diagonals, 
         generate_lines, test_square, test_squares_until
     """
-    __metaclass__ = PieceIterator
-    _pieces = []
 
     @abstractmethod
     def calculate_scope(self, position):
         pass
 
-    def remove(self):
-        self._pieces.remove(self)
-
-    def legal_move(self, position, dest_square):
-        """ Return True if the move is legal, False otherwise. 
+    def is_valid_move(self, position, dest_square):
+        """ Return True if the move is valid, False otherwise. 
 
         Args: position (Position): Current position.
               dest_square (int, int): Proposed destination square.
         """
-        if dest_square not in self.calculate_scope(position):
-            return False
-        elif self.symbol.isupper() and position.turn != 'w':
+        if self.symbol.isupper() and position.turn != 'w':
             return False
         elif self.symbol.islower() and position.turn != 'b':
             return False
+        elif dest_square not in self.calculate_scope(position):
+            return False
         else:
-           move_data = position.make_move(self, dest_square)
-           if position.is_check():
-               position.undo_move(move_data) 
-               return False
-           else:
-               return True
+            return True
 
     def generate_diagonals(self):
         """ Return a list of generators of diagonals extending from the 
@@ -151,7 +158,6 @@ class Pawn(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol
         self.square = square
-        self._pieces.append(self)
     
     def calculate_scope(self, position):
         scope = []
@@ -203,7 +209,6 @@ class Knight(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
-        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -248,7 +253,6 @@ class Bishop(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
-        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -283,7 +287,6 @@ class Rook(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
-        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -318,7 +321,6 @@ class Queen(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
-        self._pieces.append(self)
 
     def calculate_scope(self, position):
         scope = []
@@ -360,7 +362,6 @@ class King(Piece):
     def __init__(self, symbol, square):
         self.symbol = symbol 
         self.square = square
-        self._pieces.append(self)
         
     def calculate_scope(self, position):
         scope = []

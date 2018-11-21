@@ -120,7 +120,7 @@ class Board(position.Position):
         light: (rgb tuple): Colour of the light squares.
         dark: (rgb tuple): Colour of the dark squares.
         board_rect (pygame.Rect): Rect describing the chessboard region.
-        piece_list: Group of PieceSprite objects representing all
+        sprite_list: Group of PieceSprite objects representing all
                     the pieces on the board.
         moving_pieces: Group of PieceSprite objects to be moved.
         updated_rects: List of Rects to be updated on the next frame.
@@ -135,7 +135,7 @@ class Board(position.Position):
         self.light = WHITE
         self.dark = BLUE
         self.board_rect = pygame.Rect(0, 0, BOARD_SIZE, BOARD_SIZE)
-        self.piece_list = pygame.sprite.Group()
+        self.sprite_list = pygame.sprite.Group()
         self.moving_pieces = pygame.sprite.Group()
         self.updated_rects = []
         text_rect = pygame.Rect(
@@ -158,7 +158,7 @@ class Board(position.Position):
                     piece_sprite = PieceSprite(
                         symbol, x, y, (row, column), SQUARE_SIZE
                     )
-                    self.piece_list.add(piece_sprite)
+                    self.sprite_list.add(piece_sprite)
 
     def draw(self, screen, size):
         """ Draw a chessboard.
@@ -185,7 +185,7 @@ class Board(position.Position):
         draw_squares(SQUARE_SIZE, 0, SQUARE_SIZE)
         draw_squares(SQUARE_SIZE, SQUARE_SIZE, 0)
         
-        self.piece_list.draw(screen)
+        self.sprite_list.draw(screen)
 
         self.textbox.draw(screen)
 
@@ -243,7 +243,7 @@ class Board(position.Position):
         """
         if PieceSprite.selected_count > 0:
             raise ValueError("select_piece called when a piece is selected.")
-        for piece_sprite in self.piece_list:
+        for piece_sprite in self.sprite_list:
             if piece_sprite.rect.collidepoint(pos):
                 piece_sprite.selected = True
                 PieceSprite.selected_count += 1
@@ -260,7 +260,7 @@ class Board(position.Position):
             return None
 
         selected_sprite = None
-        for piece_sprite in self.piece_list:
+        for piece_sprite in self.sprite_list:
             if piece_sprite.selected:
                 selected_sprite = piece_sprite
         if selected_sprite is None: 
@@ -269,7 +269,10 @@ class Board(position.Position):
         dest_square = self.square_from_cursor(pos)
         selected = selected_sprite.piece
 
-        if selected.legal_move(self, dest_square):
+        if (selected.is_valid_move(self, dest_square) and
+            self.is_legal_move(selected_sprite.piece, dest_square, 
+                               self.sprite_list) 
+           ):
             return selected_sprite, dest_square
         else:
             selected_sprite.selected = False
@@ -282,7 +285,7 @@ class Board(position.Position):
             Args: square (int, int): Coordinates of a square.
 
         """
-        for piece_sprite in self.piece_list:
+        for piece_sprite in self.sprite_list:
             if piece_sprite.piece.square == square:
                 return piece_sprite
         return
@@ -322,8 +325,7 @@ class Board(position.Position):
         if capture is not None:
             # Delete captured piece sprite.
             captured_piece = self.find_piece_on_square(capture)
-            captured_piece.piece.remove()
-            self.piece_list.remove(captured_piece)
+            self.sprite_list.remove(captured_piece)
             dest_rect = self.clear_square(screen, capture)
             self.updated_rects.append(dest_rect)
 
