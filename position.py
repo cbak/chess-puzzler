@@ -139,6 +139,7 @@ class Position:
         return False
 
     def is_legal_move(self, piece, end, piece_list):
+        # TODO: Ensure castling is legal by examining FEN string
         move_data = self.make_move(piece, end)
         if self.is_check(piece_list):
             self.undo_move(move_data) 
@@ -163,14 +164,14 @@ class Position:
         # Process en passant capture.
         if self.algebraic(end) == self.en_passant:
             if symbol == 'P':
-                self.board[end[0]+1][end[1]] = '-'
                 capture = (end[0]+1, end[1]), self.board[end[0]+1][end[1]]
+                self.board[end[0]+1][end[1]] = '-'
             elif symbol == 'p':
-                self.board[end[0]-1][end[1]] = '-'
                 capture = (end[0]-1, end[1]), self.board[end[0]-1][end[1]]
+                self.board[end[0]-1][end[1]] = '-'
 
-        # TODO: Castling
-
+        # Process castling
+        
         return start, symbol, end, capture, castle
 
     def undo_move(self, move_data):
@@ -213,6 +214,12 @@ class Position:
             capture_square, captured_piece = capture
         else:
             capture_square = None
+
+        # TODO: Update castling string for fen
+        # 1. If w (b) castles either side, remove KQ (kq) from string.
+        # 2. If w (b) moves king's rook, remove K (k) from string.
+        # 3. If w (b) moves queen's rook, remove Q (q) from string.
+        # 4. If w (b) moves king, remove KQ (kq) from string.
 
         self.fen = self.generate_fen()
 

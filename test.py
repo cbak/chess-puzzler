@@ -2,9 +2,11 @@
 Module for unit testing.
 """
 
+import pygame
 import sys
 import unittest
 
+import graphics
 import piece
 import position
 
@@ -77,13 +79,127 @@ class TestPosition(unittest.TestCase):
         '8K/8Q/8R/8R/8N/8B/8P w - - 0 1'
     ]
 
+    def test_generate_fen(self):
+        for fen, board in self.FEN_POSITIONS:
+            test_position = position.Position(fen)
+            new_fen = test_position.generate_fen()
+            self.assertEqual(new_fen, fen)
+
     def test_make_move(self):
-        pass
+        # Test a few moves in a fairly normal chess position.
+        fen =  ('2rq1rk1/1b2bpp1/p2p1n1p/n1p1p1B1/Pp2P3/1NPP1N1P/1PB2PP1/'
+                'R2QR1K1 w - a3 0 1')
+        fen1 = ('2rq1rk1/1b2bpp1/p2p1n1p/n1p1p1B1/Pp2P1P1/1NPP1N1P/1PB2P2/'
+                'R2QR1K1 w - a3 0 1')
+        fen2 = ('2rq1rk1/1b2bpp1/p2p1B1p/n1p1p3/Pp2P1P1/1NPP1N1P/1PB2P2/'
+                'R2QR1K1 w - a3 0 1')
+        fen3 = ('2rq1rk1/1b2bpp1/p2p1B1p/n1p1p3/4P1P1/pNPP1N1P/1PB2P2/'
+                'R2QR1K1 w - a3 0 1')
+        fen4 = ('2rq1rk1/1b2bpp1/p2p1B1p/2p1p3/4P1P1/pnPP1N1P/1PB2P2/'
+                'R2QR1K1 w - a3 0 1')
+        fen5 = ('2r2rk1/1b2bpp1/pq1p1B1p/2p1p3/4P1P1/pnPP1N1P/1PB2P2/'
+                'R2QR1K1 w - a3 0 1')
+
+        moves_position = position.Position(fen)
+        pawn_g2 = piece.PieceFactory.create('P', (6, 6))
+        bishop_g5 = piece.PieceFactory.create('B', (3, 6))        
+        pawn_b4 = piece.PieceFactory.create('p', (4, 1))
+        knight_a5 = piece.PieceFactory.create('n', (3, 0))
+        queen_d8 = piece.PieceFactory.create('q', (0, 3))
+
+        moves_position.make_move(pawn_g2, (4, 6))
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen1)
+
+        moves_position.make_move(bishop_g5, (2, 5))
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen2)
+
+        moves_position.make_move(pawn_b4, (5, 0))
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen3)
+
+        moves_position.make_move(knight_a5, (5, 1))
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen4)
+
+        moves_position.make_move(queen_d8, (2, 1))
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen5)
+
+        # Test all four castling moves.
+        castling_fen = 'r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1' 
+        castling_position = position.Position(castling_fen)
+        king_e1 = piece.PieceFactory.create('K', (7, 4))
+        king_e8 = piece.PieceFactory.create('k', (0, 4))
+
+        wk_fen = 'r3k2r/8/8/8/8/8/8/R4RK1 w KQkq - 0 1'
+        castling_position.make_move(king_e1, (7, 6))
+        new_fen = castling_position.generate_fen()
+        self.assertEqual(new_fen, wk_fen)
+
+        castling_position = position.Position(castling_fen)
+        wq_fen = 'r3k2r/8/8/8/8/8/8/2KR3R w KQkq - 0 1'
+        castling_position.make_move(king_e1, (7, 2))
+        new_fen = castling_position.generate_fen()
+        self.assertEqual(new_fen, wq_fen)
+
+        castling_position = position.Position(castling_fen)
+        bk_fen = 'r4rk1/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+        castling_position.make_move(king_e1, (0, 6))
+        new_fen = castling_position.generate_fen()
+        self.assertEqual(new_fen, bk_fen)
+
+        castling_position = position.Position(castling_fen)
+        bq_fen = '2kr3r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
+        castling_position.make_move(king_e1, (0, 2))
+        new_fen = castling_position.generate_fen()
+        self.assertEqual(new_fen, bq_fen)
 
     def test_undo_move(self):
-        pass
+        fen =  ('2rq1rk1/1b2bpp1/p2p1n1p/n1p1p1B1/Pp2P3/1NPP1N1P/1PB2PP1/'
+                'R2QR1K1 w - a3 0 1')
+
+        moves_position = position.Position(fen)
+        pawn_g2 = piece.PieceFactory.create('P', (6, 6))
+        bishop_g5 = piece.PieceFactory.create('B', (3, 6))        
+        pawn_b4 = piece.PieceFactory.create('p', (4, 1))
+        knight_a5 = piece.PieceFactory.create('n', (3, 0))
+        queen_d8 = piece.PieceFactory.create('q', (0, 3))
+
+        move_data = moves_position.make_move(pawn_g2, (4, 6))
+        moves_position.undo_move(move_data)
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen)
+
+        move_data = moves_position.make_move(bishop_g5, (2, 5))
+        moves_position.undo_move(move_data)
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen)
+
+        move_data = moves_position.make_move(pawn_b4, (5, 0))
+        moves_position.undo_move(move_data)
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen)
+
+        move_data = moves_position.make_move(knight_a5, (5, 1))
+        moves_position.undo_move(move_data)
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen)
+
+        move_data = moves_position.make_move(queen_d8, (2, 1))
+        moves_position.undo_move(move_data)
+        new_fen = moves_position.generate_fen()
+        self.assertEqual(new_fen, fen)
+
+        # TODO: Add promotion test
 
     def test_is_check(self):
+        # Create Board and call add_sprites to get a sprite list to pass to is_check.
+        # Rest should be straightforward
+        pass
+    
+    def test_is_legal_move(self):
         pass
 
     def test_fen_to_board(self):
@@ -96,12 +212,6 @@ class TestPosition(unittest.TestCase):
         for fen, board in self.FEN_POSITIONS:
             test_position = position.Position(fen)
             self.assertEqual(test_position.board, board)
-
-    def test_generate_fen(self):
-        for fen, board in self.FEN_POSITIONS:
-            test_position = position.Position(fen)
-            new_fen = test_position.generate_fen()
-            self.assertEqual(new_fen, fen)
 
     def test_bad_fens(self):
         """Test incorrect FEN strings."""
