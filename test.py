@@ -146,13 +146,13 @@ class TestPosition(unittest.TestCase):
 
         castling_position = position.Position(castling_fen)
         bk_fen = 'r4rk1/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
-        castling_position.make_move(king_e1, (0, 6))
+        castling_position.make_move(king_e8, (0, 6))
         new_fen = castling_position.generate_fen()
         self.assertEqual(new_fen, bk_fen)
 
         castling_position = position.Position(castling_fen)
         bq_fen = '2kr3r/8/8/8/8/8/8/R3K2R w KQkq - 0 1'
-        castling_position.make_move(king_e1, (0, 2))
+        castling_position.make_move(king_e8, (0, 2))
         new_fen = castling_position.generate_fen()
         self.assertEqual(new_fen, bq_fen)
 
@@ -404,6 +404,16 @@ class TestPiece(unittest.TestCase):
         self.assertCountEqual(king_f4.calculate_scope(king_pos),
             [(6,5), (5,4), (4,4), (4,5), (4,6)]
         )
+
+        castling_fen = 'r3kb1r/8/8/8/8/8/8/1R2K2R w KQkq - 0 1' 
+        castling_pos = position.Position(castling_fen)
+        king_e1 = piece.PieceFactory.create('K', (7,4))
+        king_e8 = piece.PieceFactory.create('k', (0,4))
+
+        self.assertCountEqual(king_e1.calculate_scope(castling_pos),
+            [(7,5), (7,6), (6,5), (6,4), (6,3), (7,3)])
+        self.assertCountEqual(king_e8.calculate_scope(castling_pos),
+            [(1,5), (1,4), (1,3), (0,3), (0,2)])
 
 if __name__ == '__main__':
     main() 

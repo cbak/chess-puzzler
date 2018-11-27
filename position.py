@@ -151,11 +151,10 @@ class Position:
         """ Update the board. Return data to undo the update. """
         start = piece.square
         symbol = piece.symbol
+        capture = None
         castle = None
 
-        if self.board[end[0]][end[1]] == '-':
-            capture = None
-        else:
+        if self.board[end[0]][end[1]] != '-':
             capture = end, self.board[end[0]][end[1]]
         
         self.board[start[0]][start[1]] = '-'
@@ -171,7 +170,34 @@ class Position:
                 self.board[end[0]-1][end[1]] = '-'
 
         # Process castling
+        if symbol == 'K' and start == (7,4):
+            if end == (7,6):
+                castle = 'K'                
+                self.board[7][4] = '-'
+                self.board[7][6] = 'K'
+                self.board[7][7] = '-'
+                self.board[7][5] = 'R'
+            if end == (7,2):
+                castle = 'Q'                
+                self.board[7][4] = '-'
+                self.board[7][2] = 'K'
+                self.board[7][0] = '-'
+                self.board[7][3] = 'R'
         
+        if symbol == 'k' and start == (0,4):
+            if end == (0,6):
+                castle = 'k'                
+                self.board[0][4] = '-'
+                self.board[0][6] = 'k'
+                self.board[0][7] = '-'
+                self.board[0][5] = 'r'
+            if end == (0,2):
+                castle = 'q'                
+                self.board[0][4] = '-'
+                self.board[0][2] = 'k'
+                self.board[0][0] = '-'
+                self.board[0][3] = 'r'
+
         return start, symbol, end, capture, castle
 
     def undo_move(self, move_data):
@@ -182,6 +208,28 @@ class Position:
         if capture is not None:
             cap_sqr, cap_piece = capture
             self.board[cap_sqr[0]][cap_sqr[1]] = cap_piece
+
+        if castle == 'K':                
+            self.board[7][4] = 'K'
+            self.board[7][6] = '-'
+            self.board[7][7] = 'R'
+            self.board[7][5] = '-'
+        elif castle == 'Q':
+            self.board[7][4] = 'K'
+            self.board[7][2] = '-'
+            self.board[7][0] = 'R'
+            self.board[7][3] = '-'
+        elif castle == 'k':
+            self.board[0][4] = 'k'
+            self.board[0][6] = '-'
+            self.board[0][7] = 'r'
+            self.board[0][5] = '-'
+        elif castle == 'q':
+            self.board[0][4] = 'k'
+            self.board[0][2] = '-'
+            self.board[0][0] = 'r'
+            self.board[0][3] = '-'
+
 
     def update_position(self, move_data):
         """ Update the position according to a move.

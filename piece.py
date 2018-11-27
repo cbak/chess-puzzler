@@ -369,8 +369,18 @@ class King(Piece):
         row = self.square[0]
         col = self.square[1]
         if self.symbol.isupper():
+            origin = (7,4)
+            castle_k_square = (7,6)
+            castle_q_square = (7,2)
+            castle_k = [(7,5), (7,6)]
+            castle_q = [(7,1), (7,2), (7,3)]
             free_square = lambda x : x == '-' or x.islower()
         if self.symbol.islower():
+            origin = (0,4)
+            castle_k_square = (0,6)
+            castle_q_square = (0,2)
+            castle_k = [(0,5), (0,6)]
+            castle_q = [(0,1), (0,2), (0,3)]
             free_square = lambda x : x == '-' or x.isupper()
 
         if self.test_square(board, row,   col+1, free_square):
@@ -389,5 +399,11 @@ class King(Piece):
             scope.append((row-1, col))
         if self.test_square(board, row-1, col+1, free_square):
             scope.append((row-1, col+1))
-            
+
+        if self.square == origin:
+            if all(map(lambda x : board[x[0]][x[1]] == '-', castle_k)):
+                scope.append(castle_k_square)
+            if all(map(lambda x : board[x[0]][x[1]] == '-', castle_q)):
+                scope.append(castle_q_square)
+
         return scope
